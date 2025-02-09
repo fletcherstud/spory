@@ -1,18 +1,20 @@
 {
   "expo": {
-    "name": "StorySpot",
-    "slug": "StorySpot",
+    "name": "Spory AI",
+    "slug": "spory-ai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.jonathanmfletcher.sporyai",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
@@ -23,6 +25,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+          {
+            "locationWhenInUsePermission": "StorySpot uses your location to show you historical facts about your area."
+          }
+      ]      
+    ]
   }
 }

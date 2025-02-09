@@ -1,0 +1,69 @@
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React, { useState } from "react";
+import ResponseBadge from "./ResponseBadge";
+import ModifierButton from "./ModifierButton";
+import Animated, { FadeOutDown, FadeIn } from "react-native-reanimated";
+import LoadingSpinner from "./LoadingSpinner";
+import { SafeAreaView } from "react-native-safe-area-context";
+import SearchComponent from "./SearchComponent";
+
+interface ResponseComponentProps {
+  response: string;
+  clearResponse: () => void;
+  getLocationAndHistory: (modifier: string) => void;
+  isLoading: boolean;
+}
+
+export default function ResponseComponent({
+  response,
+  clearResponse,
+  getLocationAndHistory,
+  isLoading,
+}: ResponseComponentProps) {
+  return (
+    <>
+      {isLoading && (
+        <View className="absolute inset-0 bg-gray-300/50 items-center justify-center z-20">
+          <LoadingSpinner />
+        </View>
+      )}
+      <SafeAreaView className="flex-1">
+        <View className="flex-1">
+          <TouchableOpacity
+            className="absolute left-4 z-10"
+            disabled={isLoading}
+            onPress={clearResponse}
+          >
+            <Text className="text-2xl">✕</Text>
+          </TouchableOpacity>
+          {/* <View className="flex-row justify-between items-center px-4">
+		<TouchableOpacity>
+			<Text className="text-2xl">←</Text>
+		</TouchableOpacity>
+		<TouchableOpacity>
+			<Text className="text-2xl">→</Text>
+		</TouchableOpacity>
+	</View> */}
+          <View className="px-4 mt-12 flex-1">
+            <Text className="text-2xl font-bold mb-2">The History:</Text>
+
+            <ScrollView>
+              <Text className="text-lg">{response}</Text>
+            </ScrollView>
+          </View>
+
+          {/* Response metadata badges
+          <View className="flex-row gap-2 px-4 mt-4">
+            <ResponseBadge icon="📍" title="Boulder" />
+            <ResponseBadge icon="🎭" title="Funny" />
+          </View> */}
+        </View>
+        <SearchComponent
+          getLocationAndHistory={getLocationAndHistory}
+          isLoading={isLoading}
+          buttonTitle="Get a Another Fact"
+        />
+      </SafeAreaView>
+    </>
+  );
+}
