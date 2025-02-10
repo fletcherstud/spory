@@ -1,44 +1,19 @@
-import { View, Text, findNodeHandle } from "react-native";
-import React, { useState, useRef } from "react";
-import WikiTooltip from "./WikiTooltip";
+import { View, Text, Pressable } from "react-native";
+import React from "react";
 
 interface HighlightKeywordsTextProps {
   text: string;
   keywords: string[];
+  centeredKeyword: string | null;
+  onKeywordPress?: (keyword: string) => void;
 }
 
 const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
   text,
   keywords,
+  centeredKeyword,
+  onKeywordPress,
 }) => {
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  const textRefs = useRef<{ [key: string]: Text | null }>({});
-
-  const measureKeyword = (keyword: string) => {
-    const textRef = textRefs.current[keyword];
-    if (!textRef) return;
-
-    const node = findNodeHandle(textRef);
-    if (!node) return;
-
-    textRef.measure((x, y, width, height, pageX, pageY) => {
-      setTooltipPosition({
-        x: pageX,
-        y: pageY,
-        width,
-        height,
-      });
-      setActiveTooltip(keyword);
-    });
-  };
-
   const findKeywordMatches = () => {
     let result = [];
     let currentPos = 0;
@@ -53,6 +28,7 @@ const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
           result.push({
             text: text.slice(currentPos, currentPos + keyword.length),
             isKeyword: true,
+            keyword: keyword,
           });
           currentPos += keyword.length;
           matchFound = true;
@@ -65,6 +41,7 @@ const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
         result.push({
           text: text[currentPos],
           isKeyword: false,
+          keyword: null,
         });
         currentPos += 1;
       }
@@ -75,38 +52,26 @@ const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
   const textParts = findKeywordMatches();
 
   return (
-    <View className="relative">
-      <Text className="text-lg">
-        {textParts.map((part, index) =>
-          part.isKeyword ? (
-            <Text
-              key={index}
-              ref={(ref) => (textRefs.current[part.text] = ref)}
-              onPress={() => measureKeyword(part.text)}
-              className={`font-semibold ${
-                activeTooltip === part.text ? "underline" : ""
-              }`}
-              style={{ color: "#2563eb" }}
-            >
-              {part.text}
-            </Text>
-          ) : (
-            <Text key={index}>{part.text}</Text>
-          )
-        )}
-      </Text>
-      {activeTooltip && tooltipPosition && (
-        <WikiTooltip
-          keyword={activeTooltip}
-          isVisible={true}
-          onClose={() => {
-            setActiveTooltip(null);
-            setTooltipPosition(null);
-          }}
-          position={tooltipPosition}
-        />
+    <Text className="text-lg">
+      {textParts.map((part, index) =>
+        part.isKeyword ? (
+          <Text
+            key={index}
+            onPress={() => part.keyword && onKeywordPress?.(part.keyword)}
+            className="font-semibold"
+            style={{
+              color: "black",
+              textDecorationLine:
+                part.keyword === centeredKeyword ? "underline" : "none",
+            }}
+          >
+            {part.text}
+          </Text>
+        ) : (
+          <Text key={index}>{part.text}</Text>
+        )
       )}
-    </View>
+    </Text>
   );
 };
 

@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import ResponseBadge from "./ResponseBadge";
 import ModifierButton from "./ModifierButton";
 import Animated, { FadeOutDown, FadeIn } from "react-native-reanimated";
@@ -31,6 +31,15 @@ export default function ResponseComponent({
   keywordsData,
 }: ResponseComponentProps) {
   const keywords = keywordsData.map((data) => data.keyword);
+  const [centeredKeyword, setCenteredKeyword] = useState<string | null>(
+    keywordsData.find((k) => k.thumbnail)?.keyword || null
+  );
+  const [scrollToKeyword, setScrollToKeyword] = useState<string | null>(null);
+
+  const handleKeywordPress = (keyword: string) => {
+    setScrollToKeyword(keyword);
+    setCenteredKeyword(keyword);
+  };
 
   return (
     <>
@@ -62,7 +71,11 @@ export default function ResponseComponent({
           >
             {keywordsData.length > 0 && (
               <View className="mt-8">
-                <WikiImageCarousel keywordsData={keywordsData} />
+                <WikiImageCarousel
+                  keywordsData={keywordsData}
+                  onCenterItemChange={setCenteredKeyword}
+                  scrollToKeyword={scrollToKeyword}
+                />
               </View>
             )}
 
@@ -71,7 +84,12 @@ export default function ResponseComponent({
             </View>
 
             <View className="px-4 pb-4">
-              <HighlightKeywordsText text={response} keywords={keywords} />
+              <HighlightKeywordsText
+                text={response}
+                keywords={keywords}
+                centeredKeyword={centeredKeyword}
+                onKeywordPress={handleKeywordPress}
+              />
             </View>
           </ScrollView>
 

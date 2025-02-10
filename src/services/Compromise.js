@@ -99,16 +99,16 @@ export const extractKeywords = async (text) => {
   ].filter(Boolean);
 
   console.log("Potential Keywords", potentialKeywords);
-  // Remove partial matches
-  potentialKeywords = potentialKeywords.filter((keyword1, index) => {
-    return !potentialKeywords.some((keyword2, index2) => {
-      return (
-        index !== index2 &&
-        keyword2.length > keyword1.length &&
-        isPartialMatch(keyword2, keyword1)
-      );
-    });
-  });
+  // // Remove partial matches
+  // potentialKeywords = potentialKeywords.filter((keyword1, index) => {
+  //   return !potentialKeywords.some((keyword2, index2) => {
+  //     return (
+  //       index !== index2 &&
+  //       keyword2.length > keyword1.length &&
+  //       isPartialMatch(keyword2, keyword1)
+  //     );
+  //   });
+  // });
 
   const validKeywordsData = [];
   const seenTitles = new Set();
