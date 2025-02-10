@@ -20,10 +20,22 @@ import ResponseComponent from "../components/ResponseComponent";
 import LoadingSpinner from "../components/LoadingSpinner";
 import SearchComponent from "../components/SearchComponent";
 import { useFocusEffect } from "@react-navigation/native";
+import { extractKeywords } from "../services/Compromise";
+
+interface WikiData {
+  keyword: string;
+  thumbnail: string | null;
+  title: string;
+  extract: string;
+  url: string | null;
+  found: boolean;
+}
 
 export const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
+  const [keywordsData, setKeywordsData] = useState<WikiData[]>([]);
+  const [isProcessingKeywords, setIsProcessingKeywords] = useState(false);
   const [hasLocationPermission, setHasLocationPermission] =
     useState<Location.PermissionStatus | null>(null);
 
@@ -40,6 +52,25 @@ export const Home = () => {
     Linking.openSettings();
   };
 
+  useEffect(() => {
+    const processKeywords = async () => {
+      if (response) {
+        setIsProcessingKeywords(true);
+        try {
+          const extracted = await extractKeywords(response);
+          setKeywordsData(extracted);
+        } catch (error) {
+          console.error("Error extracting keywords:", error);
+          setKeywordsData([]);
+        } finally {
+          setIsProcessingKeywords(false);
+        }
+      }
+    };
+
+    processKeywords();
+  }, [response]);
+
   const getLocationAndHistory = async (modifier: string | null) => {
     try {
       // Request location permissions
@@ -51,6 +82,7 @@ export const Home = () => {
         return;
       }
       setIsLoading(true);
+      setKeywordsData([]); // Reset keywords when getting new response
 
       // Get current location
       const location = await Location.getCurrentPositionAsync({});
@@ -72,16 +104,20 @@ export const Home = () => {
 
   const clearResponse = useCallback(() => {
     setResponse("");
-  }, [response]);
+    setKeywordsData([]);
+  }, []);
+
+  const isLoadingOrProcessing = isLoading || isProcessingKeywords;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {response ? (
+      {response && !isProcessingKeywords ? (
         <ResponseComponent
           response={response}
           clearResponse={clearResponse}
           getLocationAndHistory={getLocationAndHistory}
           isLoading={isLoading}
+          keywordsData={keywordsData}
         />
       ) : (
         <View className="flex-1 items-center justify-center bg-white">
@@ -108,7 +144,7 @@ export const Home = () => {
             </View>
           )}
 
-          {isLoading && (
+          {isLoadingOrProcessing && (
             <Animated.View
               className="flex items-center mt-8"
               exiting={FadeOutDown}
@@ -118,11 +154,11 @@ export const Home = () => {
             </Animated.View>
           )}
 
-          {!isLoading && hasLocationPermission !== "denied" && (
+          {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
             <Animated.View className="mt-auto" exiting={FadeOutDown}>
               <SearchComponent
                 getLocationAndHistory={getLocationAndHistory}
-                isLoading={isLoading}
+                isLoading={isLoadingOrProcessing}
                 buttonTitle="Get a Fact"
               />
             </Animated.View>

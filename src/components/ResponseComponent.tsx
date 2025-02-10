@@ -1,17 +1,26 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import React, { useState } from "react";
+import React from "react";
 import ResponseBadge from "./ResponseBadge";
 import ModifierButton from "./ModifierButton";
 import Animated, { FadeOutDown, FadeIn } from "react-native-reanimated";
 import LoadingSpinner from "./LoadingSpinner";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SearchComponent from "./SearchComponent";
+import HighlightKeywordsText from "./HighlightKeywordsText";
+import WikiImageCarousel from "./WikiImageCarousel";
 
 interface ResponseComponentProps {
   response: string;
   clearResponse: () => void;
   getLocationAndHistory: (modifier: string) => void;
   isLoading: boolean;
+  keywordsData: Array<{
+    keyword: string;
+    thumbnail: string | null;
+    title: string;
+    extract: string;
+    url: string | null;
+  }>;
 }
 
 export default function ResponseComponent({
@@ -19,7 +28,10 @@ export default function ResponseComponent({
   clearResponse,
   getLocationAndHistory,
   isLoading,
+  keywordsData,
 }: ResponseComponentProps) {
+  const keywords = keywordsData.map((data) => data.keyword);
+
   return (
     <>
       {isLoading && (
@@ -44,13 +56,24 @@ export default function ResponseComponent({
 			<Text className="text-2xl">→</Text>
 		</TouchableOpacity>
 	</View> */}
-          <View className="px-4 mt-12 flex-1">
-            <Text className="text-2xl font-bold mb-2">The History:</Text>
+          <ScrollView
+            className="flex-1"
+            stickyHeaderIndices={[1]} // Index of the "The History" header in the ScrollView children
+          >
+            {keywordsData.length > 0 && (
+              <View className="mt-8">
+                <WikiImageCarousel keywordsData={keywordsData} />
+              </View>
+            )}
 
-            <ScrollView>
-              <Text className="text-lg">{response}</Text>
-            </ScrollView>
-          </View>
+            <View className="px-4 bg-white py-2">
+              <Text className="text-2xl font-bold">The History:</Text>
+            </View>
+
+            <View className="px-4 pb-4">
+              <HighlightKeywordsText text={response} keywords={keywords} />
+            </View>
+          </ScrollView>
 
           {/* Response metadata badges
           <View className="flex-row gap-2 px-4 mt-4">
@@ -61,7 +84,7 @@ export default function ResponseComponent({
         <SearchComponent
           getLocationAndHistory={getLocationAndHistory}
           isLoading={isLoading}
-          buttonTitle="Get a Another Fact"
+          buttonTitle="Get Another Fact"
         />
       </SafeAreaView>
     </>
