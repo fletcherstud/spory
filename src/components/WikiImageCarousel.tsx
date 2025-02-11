@@ -6,10 +6,12 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
-  Linking,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+
+const defaultWikiImage = require("../../assets/default_blank.jpg");
 
 interface WikiImageCarouselProps {
   keywordsData: Array<{
@@ -40,44 +42,33 @@ const WikiImageCarousel: React.FC<WikiImageCarouselProps> = ({
   // Calculate the padding needed to center the first and last items
   const sideInsets = (windowWidth - imageWidth - SPACING) / 2;
 
+  // Sort the data to put items with thumbnails first
+  const sortedKeywordsData = React.useMemo(() => {
+    return [...keywordsData].sort((a, b) => {
+      if (a.thumbnail && !b.thumbnail) return -1;
+      if (!a.thumbnail && b.thumbnail) return 1;
+      return 0;
+    });
+  }, [keywordsData]);
+
   React.useEffect(() => {
     if (scrollToKeyword) {
-      const index = keywordsData.findIndex(
-        (item) => item.keyword === scrollToKeyword && item.thumbnail
+      const index = sortedKeywordsData.findIndex(
+        (item) => item.keyword === scrollToKeyword
       );
       if (index !== -1) {
         const xOffset = index * (imageWidth + SPACING);
         scrollViewRef.current?.scrollTo({ x: xOffset, animated: true });
       }
     }
-  }, [scrollToKeyword]);
+  }, [scrollToKeyword, sortedKeywordsData]);
 
   const updateCenteredItem = (scrollPosition: number) => {
     const itemWidth = imageWidth + SPACING;
     const centerIndex = Math.round((scrollPosition - sideInsets) / itemWidth);
 
-    // Find the first valid item with a thumbnail at or after centerIndex
-    let validIndex = centerIndex;
-    while (
-      validIndex < keywordsData.length &&
-      !keywordsData[validIndex].thumbnail
-    ) {
-      validIndex++;
-    }
-    // If we went past the end, try going backwards
-    if (validIndex >= keywordsData.length) {
-      validIndex = centerIndex;
-      while (validIndex >= 0 && !keywordsData[validIndex].thumbnail) {
-        validIndex--;
-      }
-    }
-
-    if (
-      validIndex >= 0 &&
-      validIndex < keywordsData.length &&
-      keywordsData[validIndex].thumbnail
-    ) {
-      onCenterItemChange?.(keywordsData[validIndex].keyword);
+    if (centerIndex >= 0 && centerIndex < sortedKeywordsData.length) {
+      onCenterItemChange?.(sortedKeywordsData[centerIndex].keyword);
     }
   };
 
@@ -104,6 +95,12 @@ const WikiImageCarousel: React.FC<WikiImageCarouselProps> = ({
     }
   };
 
+  const handlePress = async (url: string | null) => {
+    if (url) {
+      await WebBrowser.openBrowserAsync(url);
+    }
+  };
+
   return (
     <View className="mt-4">
       <ScrollView
@@ -121,32 +118,31 @@ const WikiImageCarousel: React.FC<WikiImageCarouselProps> = ({
         onScrollBeginDrag={handleScrollBeginDrag}
         scrollEventThrottle={16}
       >
-        {keywordsData.map(
-          (item, index) =>
-            item.thumbnail && (
-              <TouchableOpacity
-                key={index}
-                className="rounded-lg overflow-hidden bg-white shadow"
-                style={{
-                  width: imageWidth,
-                  marginRight: SPACING,
-                }}
-                onPress={() => item.url && Linking.openURL(item.url)}
-              >
-                <Image
-                  source={{ uri: item.thumbnail }}
-                  style={{ width: imageWidth, height: imageHeight }}
-                  className="rounded-t-lg"
-                />
-                <View className="p-3">
-                  <Text className="font-bold text-lg mb-1">{item.title}</Text>
-                  <Text className="text-gray-600" numberOfLines={2}>
-                    {item.extract}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )
-        )}
+        {sortedKeywordsData.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            className="rounded-lg overflow-hidden bg-white shadow"
+            style={{
+              width: imageWidth,
+              marginRight: SPACING,
+            }}
+            onPress={() => handlePress(item.url)}
+          >
+            <Image
+              source={
+                item.thumbnail ? { uri: item.thumbnail } : defaultWikiImage
+              }
+              style={{ width: imageWidth, height: imageHeight }}
+              className="rounded-t-lg"
+            />
+            <View className="p-3">
+              <Text className="font-bold text-lg mb-1">{item.title}</Text>
+              <Text className="text-gray-600" numberOfLines={2}>
+                {item.extract}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </View>
   );

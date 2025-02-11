@@ -2,7 +2,6 @@ import { View, Text, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import ModifierButton from "./ModifierButton";
 import Animated from "react-native-reanimated";
-import LoadingSpinner from "./LoadingSpinner";
 
 const modifiers = [
   { icon: "😄", title: "Funny Fact" },
@@ -47,19 +46,13 @@ const SearchComponent = ({
 
         <Animated.View className="mt-4">
           <TouchableOpacity
-            className={`mt-auto px-8 py-4 rounded-full text-center items-center border ${
-              isLoading ? " border-black" : "bg-black border-white"
-            }`}
+            className="mt-auto px-8 py-4 rounded-full text-center items-center bg-black border border-white"
             onPress={() => getLocationAndHistory(selectedModifier)}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <LoadingSpinner size={24} />
-            ) : (
-              <Text className="text-white font-bold text-lg">
-                {selectedModifier ? `Get a ${selectedModifier}` : buttonTitle}
-              </Text>
-            )}
+            <Text className="text-white font-bold text-lg">
+              {selectedModifier ? `Get a ${selectedModifier}` : buttonTitle}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>

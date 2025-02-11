@@ -33,6 +33,7 @@ A single paragraph containing a factual historical event or detail about the giv
 
 - Ensure facts are historically accurate.
 - The response should be purely informational, similar to a Wikipedia entry.
+- All names should include the first and last name.
 - Do **not** attempt to make the fact engaging, humorous, or dramatic.
 `;
 

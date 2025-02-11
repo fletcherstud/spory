@@ -94,27 +94,18 @@ export const extractKeywords = async (text) => {
   console.log("Compromise Keyword", people, places);
 
   // Clean and deduplicate keywords, including partial matches
-  let potentialKeywords = [
-    ...new Set([...people, ...places].map(cleanKeyword)),
-  ].filter(Boolean);
+  let potentialKeywords = Array.from(
+    new Set([...people, ...places].map(cleanKeyword))
+  ).filter(Boolean);
 
   console.log("Potential Keywords", potentialKeywords);
-  // // Remove partial matches
-  // potentialKeywords = potentialKeywords.filter((keyword1, index) => {
-  //   return !potentialKeywords.some((keyword2, index2) => {
-  //     return (
-  //       index !== index2 &&
-  //       keyword2.length > keyword1.length &&
-  //       isPartialMatch(keyword2, keyword1)
-  //     );
-  //   });
-  // });
 
   const validKeywordsData = [];
   const seenTitles = new Set();
 
   for (const keyword of potentialKeywords) {
     const wikiData = await checkWikipediaAvailability(keyword);
+    // console.log("Keyword ", keyword, wikiData);
     if (wikiData.found && !seenTitles.has(wikiData.title)) {
       seenTitles.add(wikiData.title);
       validKeywordsData.push(wikiData);

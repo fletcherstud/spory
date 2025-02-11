@@ -17,12 +17,14 @@ const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
   const findKeywordMatches = () => {
     let result = [];
     let currentPos = 0;
+    const foundKeywords = new Set();
 
     while (currentPos < text.length) {
       let matchFound = false;
       // Check for keyword matches at current position
       for (const keyword of keywords) {
         if (
+          !foundKeywords.has(keyword) &&
           text.slice(currentPos).toLowerCase().startsWith(keyword.toLowerCase())
         ) {
           result.push({
@@ -30,6 +32,7 @@ const HighlightKeywordsText: React.FC<HighlightKeywordsTextProps> = ({
             isKeyword: true,
             keyword: keyword,
           });
+          foundKeywords.add(keyword);
           currentPos += keyword.length;
           matchFound = true;
           break;

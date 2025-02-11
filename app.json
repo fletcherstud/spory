@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.jonathanmfletcher.sporyai",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true
     },
     "android": {

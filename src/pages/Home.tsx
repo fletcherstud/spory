@@ -38,6 +38,7 @@ export const Home = () => {
   const [isProcessingKeywords, setIsProcessingKeywords] = useState(false);
   const [hasLocationPermission, setHasLocationPermission] =
     useState<Location.PermissionStatus | null>(null);
+  const [hasInitialResponse, setHasInitialResponse] = useState(false);
 
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -59,11 +60,15 @@ export const Home = () => {
         try {
           const extracted = await extractKeywords(response);
           setKeywordsData(extracted);
+          if (!hasInitialResponse) {
+            setHasInitialResponse(true);
+          }
         } catch (error) {
           console.error("Error extracting keywords:", error);
           setKeywordsData([]);
         } finally {
           setIsProcessingKeywords(false);
+          setIsLoading(false);
         }
       }
     };
@@ -78,11 +83,9 @@ export const Home = () => {
       setHasLocationPermission(status);
 
       if (status !== "granted") {
-        setIsLoading(false);
         return;
       }
       setIsLoading(true);
-      setKeywordsData([]); // Reset keywords when getting new response
 
       // Get current location
       const location = await Location.getCurrentPositionAsync({});
@@ -97,7 +100,6 @@ export const Home = () => {
       setResponse(history);
     } catch (error) {
       alert("Failed to get location history");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -105,18 +107,19 @@ export const Home = () => {
   const clearResponse = useCallback(() => {
     setResponse("");
     setKeywordsData([]);
+    setHasInitialResponse(false);
   }, []);
 
   const isLoadingOrProcessing = isLoading || isProcessingKeywords;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {response && !isProcessingKeywords ? (
+      {hasInitialResponse ? (
         <ResponseComponent
           response={response}
           clearResponse={clearResponse}
           getLocationAndHistory={getLocationAndHistory}
-          isLoading={isLoading}
+          isLoading={isLoadingOrProcessing}
           keywordsData={keywordsData}
         />
       ) : (
