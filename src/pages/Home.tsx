@@ -7,8 +7,9 @@ import {
   Image,
   Linking,
   SafeAreaView,
+  Alert,
 } from "react-native";
-
+import { useAuth } from "../context/AuthContext";
 import Animated, {
   FadeOutDown,
   FadeIn,
@@ -32,6 +33,7 @@ interface WikiData {
 }
 
 export const Home = () => {
+  const { user, signInWithApple, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
   const [keywordsData, setKeywordsData] = useState<WikiData[]>([]);
@@ -112,60 +114,179 @@ export const Home = () => {
 
   const isLoadingOrProcessing = isLoading || isProcessingKeywords;
 
+  const handlePremiumFeature = async (modifier: string | null) => {
+    if (modifier && !user) {
+      Alert.alert(
+        "Premium Feature",
+        "Sign in with Apple to access premium features like custom fact types!",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Sign In",
+            onPress: async () => {
+              try {
+                await signInWithApple();
+                // After successful sign in, try the action again
+                await getLocationAndHistory(modifier);
+              } catch (error) {
+                Alert.alert("Error", "Failed to sign in. Please try again.");
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    await getLocationAndHistory(modifier);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       {hasInitialResponse ? (
-        <ResponseComponent
-          response={response}
-          clearResponse={clearResponse}
-          getLocationAndHistory={getLocationAndHistory}
-          isLoading={isLoadingOrProcessing}
-          keywordsData={keywordsData}
-        />
-      ) : (
-        <View className="flex-1 items-center justify-center bg-white">
-          <Text className="text-4xl font-bold text-center">
-            Every <Text className="font-black">Spot</Text> has a{"\n"}
-            <Text className="font-black">Story</Text>
-          </Text>
-          <Text className="mt-4 text-gray-400 text-xl">Discover yours now</Text>
-
-          {hasLocationPermission === "denied" && (
-            <View className="mt-8 px-4">
-              <Text className="text-xl text-center mb-4">
-                We need location permissions to find historical facts about
-                where you are.
-              </Text>
+        <View className="flex-1">
+          <View className="flex-row justify-between items-center px-4 py-2">
+            <TouchableOpacity onPress={clearResponse}>
+              <Text className="text-2xl">✕</Text>
+            </TouchableOpacity>
+            {user ? (
               <TouchableOpacity
-                className="px-8 py-4 rounded-full text-center items-center bg-black border border-white"
-                onPress={openSettings}
+                onPress={() => {
+                  Alert.alert(
+                    "Sign Out",
+                    "Are you sure you want to sign out?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Sign Out",
+                        onPress: signOut,
+                        style: "destructive",
+                      },
+                    ]
+                  );
+                }}
+                className="flex-row items-center bg-gray-100 rounded-full px-4 py-2"
               >
-                <Text className="text-white font-bold text-lg">
-                  Open Settings
+                <Text className="text-sm font-semibold mr-2">
+                  {user.fullName || user.email || "User"}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {user.isPremium ? "Pro" : "Free"}
                 </Text>
               </TouchableOpacity>
-            </View>
-          )}
+            ) : (
+              <TouchableOpacity
+                onPress={signInWithApple}
+                className="bg-black rounded-full px-4 py-2"
+              >
+                <Text className="text-white text-sm font-semibold">
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <ResponseComponent
+            response={response}
+            clearResponse={clearResponse}
+            getLocationAndHistory={handlePremiumFeature}
+            isLoading={isLoadingOrProcessing}
+            keywordsData={keywordsData}
+          />
+        </View>
+      ) : (
+        <View className="flex-1">
+          <View className="px-4 py-2 flex-row justify-end">
+            {user ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "Sign Out",
+                    "Are you sure you want to sign out?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Sign Out",
+                        onPress: signOut,
+                        style: "destructive",
+                      },
+                    ]
+                  );
+                }}
+                className="flex-row items-center bg-gray-100 rounded-full px-4 py-2"
+              >
+                <Text className="text-sm font-semibold mr-2">
+                  {user.fullName || user.email || "User"}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {user.isPremium ? "Premium" : "Free"}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={signInWithApple}
+                className="bg-black rounded-full px-4 py-2"
+              >
+                <Text className="text-white text-sm font-semibold">
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-4xl font-bold text-center">
+              Every <Text className="font-black">Spot</Text> has a{"\n"}
+              <Text className="font-black">Story</Text>
+            </Text>
+            <Text className="mt-4 text-gray-400 text-xl">
+              Discover yours now
+            </Text>
 
-          {isLoadingOrProcessing && (
-            <Animated.View
-              className="flex items-center mt-8"
-              exiting={FadeOutDown}
-              entering={FadeInDown}
-            >
-              <LoadingSpinner size={48} />
-            </Animated.View>
-          )}
+            {hasLocationPermission === "denied" && (
+              <View className="mt-8 px-4">
+                <Text className="text-xl text-center mb-4">
+                  We need location permissions to find historical facts about
+                  where you are.
+                </Text>
+                <TouchableOpacity
+                  className="px-8 py-4 rounded-full text-center items-center bg-black border border-white"
+                  onPress={openSettings}
+                >
+                  <Text className="text-white font-bold text-lg">
+                    Open Settings
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-          {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
-            <Animated.View className="mt-auto" exiting={FadeOutDown}>
-              <SearchComponent
-                getLocationAndHistory={getLocationAndHistory}
-                isLoading={isLoadingOrProcessing}
-                buttonTitle="Get a Fact"
-              />
-            </Animated.View>
-          )}
+            {isLoadingOrProcessing && (
+              <Animated.View
+                className="flex items-center mt-8"
+                exiting={FadeOutDown}
+                entering={FadeInDown}
+              >
+                <LoadingSpinner size={48} />
+              </Animated.View>
+            )}
+
+            {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
+              <Animated.View className="mt-auto" exiting={FadeOutDown}>
+                <SearchComponent
+                  getLocationAndHistory={handlePremiumFeature}
+                  isLoading={isLoadingOrProcessing}
+                  buttonTitle="Get a Fact"
+                />
+              </Animated.View>
+            )}
+          </View>
         </View>
       )}
     </SafeAreaView>

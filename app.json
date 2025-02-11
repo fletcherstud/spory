@@ -15,7 +15,8 @@
     "ios": {
       "bundleIdentifier": "com.jonathanmfletcher.sporyai",
       "buildNumber": "2",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -29,10 +30,11 @@
     "plugins": [
       [
         "expo-location",
-          {
-            "locationWhenInUsePermission": "StorySpot uses your location to show you historical facts about your area."
-          }
-      ]      
+        {
+          "locationWhenInUsePermission": "StorySpot uses your location to show you facts about your area."
+        }
+      ],
+      "expo-apple-authentication"
     ]
   }
 }
