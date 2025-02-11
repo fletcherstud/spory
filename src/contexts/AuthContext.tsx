@@ -1,16 +1,25 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Purchases from "react-native-purchases";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, Timestamp } from "firebase/firestore";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import {
+  getAuth,
+  signInWithCredential,
+  OAuthProvider,
+  signOut as firebaseSignOut,
+  initializeAuth,
+  getReactNativePersistence,
+} from "firebase/auth";
 import app from "../firebase/config";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 
 interface User {
   id: string;
   email: string | null;
   fullName: string | null;
   isPremium: boolean;
-  lastLogoutAt?: Date;
+  lastLogoutAt?: Timestamp;
 }
 
 interface AuthContextType {
@@ -23,6 +32,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const db = getFirestore(app);
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -76,11 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await setDoc(
         userRef,
         {
-          email: userData.email,
-          fullName: userData.fullName,
+          email: userData.email || null,
+          fullName: userData.fullName || null,
           isPremium: userData.isPremium,
-          lastLoginAt: new Date(),
-          updatedAt: new Date(),
+          lastLoginAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
         },
         { merge: true }
       );
@@ -97,12 +109,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!userDoc.exists()) {
         // Create new user document
         await setDoc(userRef, {
-          email: userData.email,
-          fullName: userData.fullName,
+          email: userData.email || null,
+          fullName: userData.fullName || null,
           isPremium: userData.isPremium,
-          createdAt: new Date(),
-          lastLoginAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: Timestamp.now(),
+          lastLoginAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
         });
       } else {
         // Update existing user's login time
@@ -115,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signInWithApple = async () => {
     try {
+      // 1. Sign in with Apple
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -122,11 +135,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         ],
       });
 
-      // Log successful Apple authentication
-      console.log("Apple authentication successful", credential.user);
+      // 2. Create a Firebase OAuth provider and credential
+      const provider = new OAuthProvider("apple.com");
+      const firebaseCredential = provider.credential({
+        idToken: credential.identityToken!,
+      });
+
+      // 3. Sign in to Firebase with the Apple credential
+      const firebaseUserCredential = await signInWithCredential(
+        auth,
+        firebaseCredential
+      );
+      const firebaseUser = firebaseUserCredential.user;
+
+      console.log("Firebase authentication successful", firebaseUser.uid);
 
       // Try to get existing user data from Firestore
-      const userRef = doc(db, "users", credential.user);
+      const userRef = doc(db, "users", firebaseUser.uid);
       try {
         const userDoc = await getDoc(userRef);
         console.log("Firestore read successful", userDoc.exists());
@@ -141,17 +166,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         const newUser = {
-          id: credential.user,
-          email:
-            credential.email ||
-            (userDoc.exists() ? userDoc.data().email : null),
+          id: firebaseUser.uid, // Use Firebase UID instead of Apple user ID
+          email: firebaseUser.email || credential.email || null,
           fullName,
           isPremium: false,
         };
 
-        // Log in to RevenueCat with the user ID
+        // Log in to RevenueCat with the Firebase UID
         try {
-          await Purchases.logIn(credential.user);
+          await Purchases.logIn(firebaseUser.uid);
           console.log("RevenueCat login successful");
 
           // Check premium status
@@ -185,10 +208,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (user) {
         await updateUserInFirestore({
           ...user,
-          lastLogoutAt: new Date(),
+          lastLogoutAt: Timestamp.now(),
         });
       }
       await Purchases.logOut();
+      await firebaseSignOut(auth);
       setUser(null);
     } catch (error) {
       console.error("Error signing out:", error);
