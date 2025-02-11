@@ -4,7 +4,8 @@ import "./global.css";
 import { Home } from "./src/pages/Home";
 import { NavigationContainer } from "@react-navigation/native";
 import Purchases from "react-native-purchases";
-import { AuthProvider } from "./src/context/AuthContext";
+import { AuthProvider } from "./src/contexts/AuthContext";
+import "./src/firebase/config";
 
 export default function App() {
   Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);

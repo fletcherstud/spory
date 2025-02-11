@@ -44,13 +44,13 @@ export default function ResponseComponent({
   return (
     <SafeAreaView className="flex-1">
       <View className="flex-1">
-        <TouchableOpacity
+        {/* <TouchableOpacity
           className="pl-5"
           disabled={isLoading}
           onPress={clearResponse}
         >
           <Text className="text-2xl">✕</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         {/* <View className="flex-row justify-between items-center px-4">
 		<TouchableOpacity>
 			<Text className="text-2xl">←</Text>

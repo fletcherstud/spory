@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import Animated, {
   FadeOutDown,
   FadeIn,
@@ -185,9 +185,15 @@ export const Home = () => {
                 onPress={signInWithApple}
                 className="bg-black rounded-full px-4 py-2"
               >
-                <Text className="text-white text-sm font-semibold">
-                  Sign In
-                </Text>
+                <View className="flex-row items-center">
+                  <Image
+                    source={require("../../assets/apple-logo.png")}
+                    className="w-4 h-4 mr-2"
+                  />
+                  <Text className="text-white text-sm font-semibold">
+                    Sign In
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
@@ -235,9 +241,15 @@ export const Home = () => {
                 onPress={signInWithApple}
                 className="bg-black rounded-full px-4 py-2"
               >
-                <Text className="text-white text-sm font-semibold">
-                  Sign In
-                </Text>
+                <View className="flex-row items-center">
+                  <Image
+                    source={require("../../assets/apple-logo.png")}
+                    className="w-4 h-4 mr-2"
+                  />
+                  <Text className="text-white text-sm font-semibold">
+                    Sign In
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
