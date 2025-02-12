@@ -1,6 +1,9 @@
 import nlp from "compromise";
 import plg from "compromise-dates";
+import wiki from "compromise-wikipedia";
+
 nlp.plugin(plg);
+nlp.plugin(wiki);
 
 const commonCities = {
   "New York": "New_York_City",
@@ -44,11 +47,45 @@ const preprocessKeyword = (keyword) => {
   return cleanedKeyword.replace(/\s+/g, "_");
 };
 
+const searchWikipedia = async (keyword) => {
+  try {
+    // First search for the most relevant article
+    const searchResponse = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+        keyword
+      )}&format=json&origin=*&srlimit=1`
+    );
+    const searchData = await searchResponse.json();
+    if (searchData.query?.search?.length > 0) {
+      const topResult = searchData.query.search[0];
+      return topResult.title;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error searching Wikipedia:", error);
+    return null;
+  }
+};
+
 const checkWikipediaAvailability = async (keyword) => {
   try {
+    // First search for the most relevant article title
+    const articleTitle = await searchWikipedia(keyword);
+    if (!articleTitle) {
+      return {
+        found: false,
+        keyword: cleanKeyword(keyword),
+        thumbnail: null,
+        title: cleanKeyword(keyword),
+        extract: "",
+        url: null,
+      };
+    }
+
+    // Then get the article summary using the correct title
     const response = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
-        keyword
+        articleTitle
       )}`
     );
     const data = await response.json();
@@ -63,6 +100,7 @@ const checkWikipediaAvailability = async (keyword) => {
         title: data.title || cleanKeyword(keyword),
         extract: data.extract || "",
         url: data.content_urls?.desktop?.page || null,
+        originalKeyword: keyword, // Keep track of the original keyword for reference
       };
     }
 
@@ -75,6 +113,7 @@ const checkWikipediaAvailability = async (keyword) => {
       url: null,
     };
   } catch (error) {
+    console.error("Error checking Wikipedia availability:", error);
     return {
       found: false,
       keyword: cleanKeyword(keyword),
@@ -88,24 +127,18 @@ const checkWikipediaAvailability = async (keyword) => {
 
 export const extractKeywords = async (text) => {
   let doc = nlp(text);
-  let people = doc.people().out("array");
-  let places = doc.places().out("array");
 
-  console.log("Compromise Keyword", people, places);
-
-  // Clean and deduplicate keywords, including partial matches
-  let potentialKeywords = Array.from(
-    new Set([...people, ...places].map(cleanKeyword))
-  ).filter(Boolean);
-
-  console.log("Potential Keywords", potentialKeywords);
+  // Use compromise-wikipedia to find entities with Wikipedia articles
+  let wikiEntities = doc.wikipedia().json();
+  console.log("Wikipedia Entities:", wikiEntities);
 
   const validKeywordsData = [];
   const seenTitles = new Set();
 
-  for (const keyword of potentialKeywords) {
-    const wikiData = await checkWikipediaAvailability(keyword);
-    // console.log("Keyword ", keyword, wikiData);
+  for (const keyword of wikiEntities) {
+    // console.log("Processing keyword:", keyword.text);
+    const wikiData = await checkWikipediaAvailability(keyword.text);
+    // console.log("Wikipedia data for", keyword.text, ":", wikiData);
     if (wikiData.found && !seenTitles.has(wikiData.title)) {
       seenTitles.add(wikiData.title);
       validKeywordsData.push(wikiData);
