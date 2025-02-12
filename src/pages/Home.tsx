@@ -22,6 +22,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import SearchComponent from "../components/SearchComponent";
 import { useFocusEffect } from "@react-navigation/native";
 import { extractKeywords } from "../services/Compromise";
+import SignInButton from "../components/SignInButton";
 
 interface WikiData {
   keyword: string;
@@ -33,7 +34,7 @@ interface WikiData {
 }
 
 export const Home = () => {
-  const { user, signInWithApple, signOut } = useAuth();
+  const { user, signInWithApple, signOut, isSigningIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
   const [keywordsData, setKeywordsData] = useState<WikiData[]>([]);
@@ -127,13 +128,8 @@ export const Home = () => {
           {
             text: "Sign In",
             onPress: async () => {
-              try {
-                await signInWithApple();
-                // After successful sign in, try the action again
-                await getLocationAndHistory(modifier);
-              } catch (error) {
-                Alert.alert("Error", "Failed to sign in. Please try again.");
-              }
+              await signInWithApple();
+              await getLocationAndHistory(modifier);
             },
           },
         ]
@@ -181,20 +177,10 @@ export const Home = () => {
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                onPress={signInWithApple}
-                className="bg-black rounded-full px-4 py-2"
-              >
-                <View className="flex-row items-center">
-                  <Image
-                    source={require("../../assets/apple-logo.png")}
-                    className="w-4 h-4 mr-2"
-                  />
-                  <Text className="text-white text-sm font-semibold">
-                    Sign In
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <SignInButton
+                signInWithApple={signInWithApple}
+                isSigningIn={isSigningIn}
+              />
             )}
           </View>
           <ResponseComponent
@@ -237,20 +223,10 @@ export const Home = () => {
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                onPress={signInWithApple}
-                className="bg-black rounded-full px-4 py-2"
-              >
-                <View className="flex-row items-center">
-                  <Image
-                    source={require("../../assets/apple-logo.png")}
-                    className="w-4 h-4 mr-2"
-                  />
-                  <Text className="text-white text-sm font-semibold">
-                    Sign In
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <SignInButton
+                signInWithApple={signInWithApple}
+                isSigningIn={isSigningIn}
+              />
             )}
           </View>
           <View className="flex-1 items-center justify-center">

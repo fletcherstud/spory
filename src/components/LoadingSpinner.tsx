@@ -12,7 +12,7 @@ import { useEffect } from "react";
 
 interface LoadingSpinnerProps {
   size?: number;
-  color?: "black" | "grey";
+  color?: string;
 }
 
 const LoadingSpinner = ({
@@ -53,7 +53,7 @@ const LoadingSpinner = ({
             height: size,
             borderRadius: size / 2,
             borderWidth: borderWidth,
-            borderColor: color === "black" ? "#000" : "#D1D5DB",
+            borderColor: color,
             borderTopColor: "transparent",
           }}
         />

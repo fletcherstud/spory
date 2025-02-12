@@ -25,9 +25,11 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isSigningIn: boolean;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
   checkPremiumStatus: () => Promise<boolean>;
+  setIsSigningIn: (value: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -49,38 +51,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
-    // Check for existing auth state on app launch
-    checkAuthState();
-  }, []);
-
-  const checkAuthState = async () => {
-    try {
-      const credentialState = await AppleAuthentication.getCredentialStateAsync(
-        user?.id || ""
-      );
-
-      if (
-        credentialState ===
-        AppleAuthentication.AppleAuthenticationCredentialState.AUTHORIZED
-      ) {
-        // User is still authenticated
-        const isPremium = await checkPremiumStatus();
-        if (user) {
-          const updatedUser = { ...user, isPremium };
-          setUser(updatedUser);
-          await updateUserInFirestore(updatedUser);
+    // Start syncing with Firebase
+    setIsSigningIn(true);
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const isPremium = await checkPremiumStatus();
+            setUser({
+              id: firebaseUser.uid,
+              email: userData.email,
+              fullName: userData.fullName,
+              isPremium,
+            });
+          }
+        } catch (error) {
+          console.error("Error restoring user session:", error);
+          setUser(null);
         }
       } else {
+        // User is signed out
         setUser(null);
       }
-    } catch (error) {
-      setUser(null);
-    } finally {
       setIsLoading(false);
-    }
-  };
+      setIsSigningIn(false);
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
 
   const updateUserInFirestore = async (userData: User) => {
     try {
@@ -152,47 +157,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Try to get existing user data from Firestore
       const userRef = doc(db, "users", firebaseUser.uid);
-      try {
-        const userDoc = await getDoc(userRef);
-        console.log("Firestore read successful", userDoc.exists());
+      const userDoc = await getDoc(userRef);
+      let fullName = null;
 
-        let fullName = null;
-        if (userDoc.exists()) {
-          // If user exists, preserve their existing fullName
-          fullName = userDoc.data().fullName;
-        } else if (credential.fullName) {
-          // Only use credential.fullName for new users
-          fullName = `${credential.fullName.givenName} ${credential.fullName.familyName}`;
-        }
-
-        const newUser = {
-          id: firebaseUser.uid, // Use Firebase UID instead of Apple user ID
-          email: firebaseUser.email || credential.email || null,
-          fullName,
-          isPremium: false,
-        };
-
-        // Log in to RevenueCat with the Firebase UID
-        try {
-          await Purchases.logIn(firebaseUser.uid);
-          console.log("RevenueCat login successful");
-
-          // Check premium status
-          newUser.isPremium = await checkPremiumStatus();
-
-          // Create/update user in Firestore
-          await createUserInFirestore(newUser);
-          console.log("User created/updated in Firestore");
-
-          setUser(newUser);
-        } catch (revenueCatError) {
-          console.error("RevenueCat error:", revenueCatError);
-          throw revenueCatError;
-        }
-      } catch (firestoreError) {
-        console.error("Firestore error:", firestoreError);
-        throw firestoreError;
+      if (userDoc.exists()) {
+        fullName = userDoc.data().fullName;
+      } else if (credential.fullName) {
+        const givenName = credential.fullName.givenName || "";
+        const familyName = credential.fullName.familyName || "";
+        fullName = [givenName, familyName].filter(Boolean).join(" ");
       }
+
+      if (!fullName) {
+        fullName = firebaseUser.email || null;
+      }
+
+      const newUser = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email || credential.email || null,
+        fullName,
+        isPremium: false,
+      };
+
+      // Log in to RevenueCat with the Firebase UID
+      await Purchases.logIn(firebaseUser.uid);
+      newUser.isPremium = await checkPremiumStatus();
+      await createUserInFirestore(newUser);
+      console.log("User created/updated in Firestore");
+
+      setUser(newUser);
     } catch (error) {
       if (error.code === "ERR_CANCELED") {
         console.log("User cancelled Apple sign in");
@@ -200,6 +193,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       console.error("Sign in error:", error);
       throw error;
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
@@ -234,9 +229,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         user,
         isLoading,
+        isSigningIn,
         signInWithApple,
         signOut,
         checkPremiumStatus,
+        setIsSigningIn,
       }}
     >
       {children}
