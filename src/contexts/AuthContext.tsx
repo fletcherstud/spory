@@ -13,6 +13,7 @@ import {
 } from "firebase/auth";
 import app from "../firebase/config";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState, Alert } from "react-native";
 
 interface User {
   id: string;
@@ -30,6 +31,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   checkPremiumStatus: () => Promise<boolean>;
   setIsSigningIn: (value: boolean) => void;
+  syncPurchases: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,6 +54,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
+
+  // Function to update user's premium status
+  const updatePremiumStatus = async () => {
+    if (user) {
+      console.log("Updating premium status for user:", user.id);
+
+      const isPremium = await checkPremiumStatus();
+      console.log(
+        "New premium status:",
+        isPremium,
+        "Current status:",
+        user.isPremium
+      );
+
+      if (isPremium !== user.isPremium) {
+        console.log("Premium status changed, updating user...");
+        setUser((prevUser) => ({
+          ...prevUser!,
+          isPremium,
+        }));
+        // Update Firestore with new premium status
+        await updateUserInFirestore({
+          ...user,
+          isPremium,
+        });
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Set up RevenueCat listeners
+  useEffect(() => {
+    const customerInfoUpdateListener = async (customerInfo: any) => {
+      console.log("Purchase status updated:", customerInfo);
+      await updatePremiumStatus();
+    };
+
+    Purchases.addCustomerInfoUpdateListener(customerInfoUpdateListener);
+
+    // Cleanup listener on unmount
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(customerInfoUpdateListener);
+    };
+  }, [user]); // Add user as dependency since updatePremiumStatus uses it
+
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (nextAppState === "active") {
+          // Update premium status when app becomes active
+          await updatePremiumStatus();
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [user]);
 
   useEffect(() => {
     // Start syncing with Firebase
@@ -180,11 +244,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       // Log in to RevenueCat with the Firebase UID
+      console.log("Logging into RevenueCat with user ID:", firebaseUser.uid);
       await Purchases.logIn(firebaseUser.uid);
+
       await Purchases.setAttributes({
         email: newUser.email,
         name: newUser.fullName,
       });
+
+      // Force a sync after login
+      console.log("Forcing initial sync after login...");
+      await Purchases.syncPurchases();
+
       newUser.isPremium = await checkPremiumStatus();
       await createUserInFirestore(newUser);
       console.log("User created/updated in Firestore");
@@ -205,34 +276,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signOut = async () => {
     try {
       if (user) {
+        console.log("Signing out user:", user.id);
         await updateUserInFirestore({
           ...user,
           lastLogoutAt: Timestamp.now(),
         });
       }
+
+      // Log out of RevenueCat first
+      console.log("Logging out of RevenueCat...");
       await Purchases.logOut();
+
+      // Then sign out of Firebase
+      console.log("Signing out of Firebase...");
       await firebaseSignOut(auth);
+
       setUser(null);
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Error during sign out:", error);
+      Alert.alert(
+        "Sign Out Error",
+        "There was an error signing out. Please try again.",
+        [{ text: "OK" }]
+      );
     }
   };
 
   const checkPremiumStatus = async () => {
     try {
+      // First sync with store to ensure latest status
+      await Purchases.syncPurchases();
+
+      // Get fresh customer info after sync
       const customerInfo = await Purchases.getCustomerInfo();
+      console.log("Full customer info:", JSON.stringify(customerInfo, null, 2));
 
       if (customerInfo.entitlements.active["Pro"] !== undefined) {
-        console.log(
-          "Customer info:",
-          customerInfo.entitlements.active["Pro"].isActive
-        );
-        return customerInfo.entitlements.active["Pro"].isActive;
+        const proEntitlement = customerInfo.entitlements.active["Pro"];
+        console.log("Pro entitlement details:", {
+          isActive: proEntitlement.isActive,
+          willRenew: proEntitlement.willRenew,
+          periodType: proEntitlement.periodType,
+          latestPurchaseDate: proEntitlement.latestPurchaseDate,
+          originalPurchaseDate: proEntitlement.originalPurchaseDate,
+          expirationDate: proEntitlement.expirationDate,
+        });
+        return proEntitlement.isActive;
       }
-      console.log("Could not determine if user is premium");
+      console.log("No Pro entitlement found in customer info");
       return false;
     } catch (error) {
       console.error("Error checking premium status:", error);
+      return false;
+    }
+  };
+
+  // Add syncPurchases to the context interface
+  const syncPurchases = async () => {
+    try {
+      console.log("Starting purchase sync...");
+
+      // First ensure user is properly identified in RevenueCat
+      if (user) {
+        console.log("Ensuring user is identified in RevenueCat:", user.id);
+        const currentUser = await Purchases.getCustomerInfo();
+        console.log("Current RevenueCat user:", currentUser.originalAppUserId);
+
+        // If the current RevenueCat user doesn't match our user, log them in again
+        if (currentUser.originalAppUserId !== user.id) {
+          console.log("RevenueCat user mismatch, logging in again...");
+          await Purchases.logIn(user.id);
+          await Purchases.setAttributes({
+            email: user.email,
+            name: user.fullName,
+          });
+        }
+      }
+
+      // Sync purchases with store
+      console.log("Syncing purchases with store...");
+      await Purchases.syncPurchases();
+
+      // Get latest customer info
+      const customerInfo = await Purchases.getCustomerInfo();
+      console.log(
+        "Post-sync customer info:",
+        JSON.stringify(customerInfo, null, 2)
+      );
+
+      // Update premium status
+      const wasUpdated = await updatePremiumStatus();
+      console.log("Premium status updated:", wasUpdated);
+
+      return wasUpdated;
+    } catch (error) {
+      console.error("Error during purchase sync:", error);
+      Alert.alert(
+        "Sync Error",
+        "There was an error syncing your purchases. Please try again.",
+        [{ text: "OK" }]
+      );
       return false;
     }
   };
@@ -247,6 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signOut,
         checkPremiumStatus,
         setIsSigningIn,
+        syncPurchases,
       }}
     >
       {children}

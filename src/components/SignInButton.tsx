@@ -19,7 +19,7 @@ const SignInButton: React.FC<SignInButtonProps> = ({
     >
       <View className="flex-row items-center">
         {isSigningIn ? ( // Show loading spinner if signing in
-          <LoadingSpinner size={20} color="white" />
+          <LoadingSpinner size={18} color="white" />
         ) : (
           <>
             <Image

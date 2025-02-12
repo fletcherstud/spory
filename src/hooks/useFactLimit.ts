@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import RevenueCatUI from 'react-native-purchases-ui';
 import Purchases from 'react-native-purchases';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 
 const DAILY_FACT_LIMIT = 5;
 const FACT_COUNT_KEY = '@fact_count';
@@ -13,8 +13,25 @@ export const useFactLimit = () => {
   const { user, signInWithApple } = useAuth();
   const [factCount, setFactCount] = useState(0);
 
+  // Check and update fact count when app becomes active
   useEffect(() => {
-    loadFactCount();
+    const checkAndUpdateFactCount = async () => {
+			console.log("Getting Fact Count")
+      await loadFactCount();
+    };
+
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        await checkAndUpdateFactCount();
+      }
+    });
+
+    // Initial check
+    checkAndUpdateFactCount();
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const loadFactCount = async () => {
@@ -39,6 +56,11 @@ export const useFactLimit = () => {
 
   const incrementFactCount = async () => {
     try {
+      // Don't increment count for premium users
+      if (user?.isPremium) {
+        return;
+      }
+
       const newCount = factCount + 1;
       await AsyncStorage.setItem(FACT_COUNT_KEY, newCount.toString());
       setFactCount(newCount);
