@@ -133,31 +133,66 @@ export const extractKeywords = async (text) => {
   // Get person entities using compromise
   let persons = doc.people().json();
 
-  // Combine Wikipedia entities and persons, removing duplicates
+  // Get all capitalized terms that might be proper nouns, excluding dates
+  let capitalizedTerms = doc
+    .match("#ProperNoun+")
+    .not("#Date") // Exclude dates
+    .not("#Month") // Exclude months
+    .not("#Year") // Exclude years
+    .json();
+
+  console.log("Capitalized terms:", capitalizedTerms);
+
+  // Combine all entities, removing duplicates and handling overlaps
   let combinedEntities = [...wikiEntities];
 
-  // Add persons that aren't already in wikiEntities
+  // Helper function to check if a term is contained within any other terms
+  const isSubstringOfOtherTerm = (text, entities) => {
+    const normalizedText = text.toLowerCase();
+    return entities.some((entity) => {
+      const normalizedEntity = entity.text.toLowerCase();
+      return (
+        normalizedEntity !== normalizedText &&
+        normalizedEntity.includes(normalizedText)
+      );
+    });
+  };
+
+  // Add persons that aren't already in combinedEntities and aren't substrings of other terms
   for (const person of persons) {
     if (
-      !wikiEntities.some(
+      !combinedEntities.some(
         (entity) => entity.text.toLowerCase() === person.text.toLowerCase()
-      )
+      ) &&
+      !isSubstringOfOtherTerm(person.text, combinedEntities)
     ) {
       combinedEntities.push(person);
     }
   }
 
-  // Update wikiEntities with the combined list
-  wikiEntities = combinedEntities;
-  console.log("Wikipedia Entities:", wikiEntities);
+  // Add capitalized terms that aren't already in combinedEntities and aren't substrings of other terms
+  for (const term of capitalizedTerms) {
+    if (
+      !combinedEntities.some(
+        (entity) => entity.text.toLowerCase() === term.text.toLowerCase()
+      ) &&
+      !isSubstringOfOtherTerm(term.text, combinedEntities)
+    ) {
+      // If this is a longer term that contains existing terms, remove those shorter terms
+      combinedEntities = combinedEntities.filter(
+        (entity) => !isSubstringOfOtherTerm(entity.text, [term])
+      );
+      combinedEntities.push(term);
+    }
+  }
+
+  console.log("Combined entities:", combinedEntities);
 
   const validKeywordsData = [];
   const seenTitles = new Set();
 
-  for (const keyword of wikiEntities) {
-    // console.log("Processing keyword:", keyword.text);
+  for (const keyword of combinedEntities) {
     const wikiData = await checkWikipediaAvailability(keyword.text);
-    // console.log("Wikipedia data for", keyword.text, ":", wikiData);
     if (wikiData.found && !seenTitles.has(wikiData.title)) {
       seenTitles.add(wikiData.title);
       validKeywordsData.push(wikiData);
