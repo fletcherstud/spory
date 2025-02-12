@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { ScrollView } from "react-native-gesture-handler";
 import Purchases from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
+import { usePremiumFeature } from "../hooks/usePremiumFeature";
 
 interface Modifier {
   icon: string;
@@ -17,13 +18,14 @@ const freeModifiers: Modifier[] = [
   { icon: "😄", title: "Funny Fact", premium: false },
   { icon: "🎲", title: "Random Fact", premium: false },
   { icon: "💡", title: "Interesting Fact", premium: false },
+  { icon: "📖", title: "History Fact", premium: false },
 ];
 
 const premiumModifiers: Modifier[] = [
   { icon: "🤯", title: "Crazy Fact", premium: true },
   { icon: "🔮", title: "Mysterious Fact", premium: true },
-  { icon: "👻", title: "Spooky Fact", premium: true },
-  { icon: "🌳", title: "Nature Fact", premium: true },
+  { icon: "👻", title: "Scary Fact", premium: true },
+  { icon: "🎤", title: "Pop Culture Fact", premium: true },
 ];
 
 const { width } = Dimensions.get("window");
@@ -42,7 +44,7 @@ const SearchComponent = ({
   const [selectedModifier, setSelectedModifier] = useState<Modifier | null>(
     null
   );
-  const { user, signInWithApple } = useAuth();
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(0);
 
   const handleScroll = (event: any) => {
@@ -51,58 +53,17 @@ const SearchComponent = ({
   };
 
   const handleModifierPress = async (modifier: Modifier) => {
-    if (modifier.premium) {
-      if (!user) {
-        Alert.alert(
-          "Sign In Required",
-          "Please sign in with Apple to access premium features.",
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Sign In",
-              onPress: async () => {
-                try {
-                  await signInWithApple();
-                  // After successful sign in, show the paywall if user is not premium
-                  if (!user?.isPremium) {
-                    const offerings = await Purchases.getOfferings();
-                    if (offerings.current?.availablePackages.length) {
-                      await RevenueCatUI.presentPaywall();
-                    }
-                  }
-                } catch (error) {
-                  console.error("Error during sign in:", error);
-                }
-              },
-            },
-          ]
-        );
-        return;
-      }
-
-      if (!user.isPremium) {
-        try {
-          const offerings = await Purchases.getOfferings();
-          if (offerings.current?.availablePackages.length) {
-            await RevenueCatUI.presentPaywall();
-          }
-        } catch (e: any) {
-          console.error("Error showing paywall:", e?.message || e);
-        }
-        return;
-      }
-    }
-
-    setSelectedModifier(modifier);
+    setSelectedModifier(
+      selectedModifier?.title === modifier.title ? null : modifier
+    );
   };
 
   return (
     <View>
       <View className="px-4">
-        <Text className="text-lg font-semibold mb-2">Try another version:</Text>
+        <Text className="text-lg font-semibold mb-2">
+          {currentPage === 0 ? "Try another version:" : "Try a Pro version:"}
+        </Text>
         <ScrollView
           horizontal
           pagingEnabled
@@ -142,21 +103,6 @@ const SearchComponent = ({
           </View>
         </ScrollView>
       </View>
-
-      {/* <View className="absolute bottom-8 left-0 right-0 flex-row justify-center">
-        <View className="flex-row gap-1">
-          <View
-            className={`h-1.5 w-1.5 rounded-full ${
-              currentPage === 0 ? "bg-black" : "bg-gray-300"
-            }`}
-          />
-          <View
-            className={`h-1.5 w-1.5 rounded-full ${
-              currentPage === 1 ? "bg-black" : "bg-gray-300"
-            }`}
-          />
-        </View>
-      </View> */}
       <View className="items-center">
         <TouchableOpacity
           className="px-8 py-4 mt-5 rounded-full text-center items-center bg-black border mb-8 w-11/12"

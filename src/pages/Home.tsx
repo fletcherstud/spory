@@ -23,6 +23,7 @@ import SearchComponent from "../components/SearchComponent";
 import { useFocusEffect } from "@react-navigation/native";
 import { extractKeywords } from "../services/Compromise";
 import SignInButton from "../components/SignInButton";
+import { usePremiumFeature } from "../hooks/usePremiumFeature";
 
 interface WikiData {
   keyword: string;
@@ -35,6 +36,7 @@ interface WikiData {
 
 export const Home = () => {
   const { user, signInWithApple, signOut, isSigningIn } = useAuth();
+  const { attemptPremiumFeature } = usePremiumFeature();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
   const [keywordsData, setKeywordsData] = useState<WikiData[]>([]);
@@ -118,24 +120,10 @@ export const Home = () => {
   const handlePremiumFeature = async (
     modifier: { title: string; premium?: boolean } | null
   ) => {
-    if (modifier?.premium && !user) {
-      Alert.alert(
-        "Premium Feature",
-        "Sign in with Apple to access premium features like custom fact types!",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Sign In",
-            onPress: async () => {
-              await signInWithApple();
-              await getLocationAndHistory(modifier.title);
-            },
-          },
-        ]
-      );
+    if (modifier?.premium) {
+      await attemptPremiumFeature(async () => {
+        await getLocationAndHistory(modifier.title);
+      });
       return;
     }
 
@@ -230,7 +218,7 @@ export const Home = () => {
                   {user.fullName || user.email || "User"}
                 </Text>
                 <Text className="text-xs text-gray-500">
-                  {user.isPremium ? "Premium" : "Free"}
+                  {user.isPremium ? "Pro" : "Free"}
                 </Text>
               </TouchableOpacity>
             ) : (

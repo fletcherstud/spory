@@ -76,7 +76,7 @@ export default function ResponseComponent({
           )}
 
           <View className="px-4 bg-white py-2">
-            <Text className="text-2xl font-bold">The History:</Text>
+            <Text className="text-2xl font-bold">The Facts:</Text>
           </View>
 
           <View className="px-4 pb-4">

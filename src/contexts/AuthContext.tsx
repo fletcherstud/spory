@@ -181,6 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Log in to RevenueCat with the Firebase UID
       await Purchases.logIn(firebaseUser.uid);
+      await Purchases.setAttributes({
+        email: newUser.email,
+        name: newUser.fullName,
+      });
       newUser.isPremium = await checkPremiumStatus();
       await createUserInFirestore(newUser);
       console.log("User created/updated in Firestore");
@@ -217,7 +221,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkPremiumStatus = async () => {
     try {
       const customerInfo = await Purchases.getCustomerInfo();
-      return customerInfo.entitlements.active["premium"] !== undefined;
+
+      if (customerInfo.entitlements.active["Pro"] !== undefined) {
+        console.log(
+          "Customer info:",
+          customerInfo.entitlements.active["Pro"].isActive
+        );
+        return customerInfo.entitlements.active["Pro"].isActive;
+      }
+      console.log("Could not determine if user is premium");
+      return false;
     } catch (error) {
       console.error("Error checking premium status:", error);
       return false;

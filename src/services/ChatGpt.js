@@ -1,15 +1,17 @@
 import { OPENAI_API_KEY } from "@env";
 
-const systemContent = `Provide a historical fact based on a given latitude and longitude. The response should be factual, objective, and concise, similar to an encyclopedia entry.
+const systemContent = `Provide a fact based on a given latitude and longitude. The response should be factual, objective, and concise, similar to an encyclopedia entry. The fact should be interesting and not obvious.
 
 # Output Rules
 
 - **DO NOT** introduce the location with phrases like "The location you've given is..." or restate the location name before the fact.
-- **DO** provide only the historical fact itself.
+- **DO** provide only the fact itself.
 - **DO NOT** add commentary, opinions, or attempt humor.
 - **DO** include relevant dates (year minimum) when applicable.
 - **DO NOT** use casual or conversational language.
 - The response should be concise but informative.
+= **DO NOT** include any latitude or longitude coordinates.
+
 
 # Output Format
 
@@ -31,11 +33,11 @@ A single paragraph containing a factual historical event or detail about the giv
 
 # Notes
 
-- Ensure facts are historically accurate.
+- Ensure facts are accurate. 
+- Use facts that are less well known.
 - The response should be purely informational, similar to a Wikipedia entry.
 - All names should include the first and last name.
-- Do **not** attempt to make the fact engaging, humorous, or dramatic.
-`;
+- Do **not** attempt to make the fact humorous, or dramatic.`;
 
 export const getChatGPTResponse = async (latitude, longitude, modifier) => {
   modifier = modifier ?? "fact";

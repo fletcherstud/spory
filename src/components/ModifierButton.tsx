@@ -31,7 +31,7 @@ const ModifierButton = ({
           isSelected ? "text-white" : "text-black"
         } text-sm font-medium`}
       >
-        {title} {isPremium && "✨"}
+        {title}
       </Text>
       {isLocked && <Text className="ml-1.5 text-sm">🔒</Text>}
     </TouchableOpacity>
