@@ -12,7 +12,9 @@ import WikiImageCarousel from "./WikiImageCarousel";
 interface ResponseComponentProps {
   response: string;
   clearResponse: () => void;
-  getLocationAndHistory: (modifier: string) => void;
+  getLocationAndHistory: (
+    modifier: { title: string; premium?: boolean } | null
+  ) => void;
   isLoading: boolean;
   keywordsData: Array<{
     keyword: string;
@@ -93,11 +95,11 @@ export default function ResponseComponent({
           <ResponseBadge icon="��" title="Funny" />
         </View> */}
       </View>
-      <SearchComponent
+      {/* <SearchComponent
         getLocationAndHistory={getLocationAndHistory}
         isLoading={isLoading}
         buttonTitle="Get Another Fact"
-      />
+      /> */}
       {isLoading && (
         <View
           className="absolute inset-0 items-center justify-center"

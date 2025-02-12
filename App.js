@@ -6,6 +6,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import Purchases from "react-native-purchases";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import "./src/firebase/config";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function App() {
   Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
@@ -15,10 +16,12 @@ export default function App() {
   });
 
   return (
-    <NavigationContainer>
-      <AuthProvider>
-        <Home />
-      </AuthProvider>
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <AuthProvider>
+          <Home />
+        </AuthProvider>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }

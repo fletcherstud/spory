@@ -50,6 +50,9 @@ PODS:
   - hermes-engine/Pre-built (0.76.7)
   - PurchasesHybridCommon (13.17.0):
     - RevenueCat (= 5.16.0)
+  - PurchasesHybridCommonUI (13.17.0):
+    - PurchasesHybridCommon (= 13.17.0)
+    - RevenueCatUI (= 5.16.0)
   - RCT-Folly (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -1619,6 +1622,8 @@ PODS:
     - React-perflogger (= 0.76.7)
     - React-utils (= 0.76.7)
   - RevenueCat (5.16.0)
+  - RevenueCatUI (5.16.0):
+    - RevenueCat (= 5.16.0)
   - RNCAsyncStorage (1.23.1):
     - DoubleConversion
     - glog
@@ -1640,6 +1645,30 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNGestureHandler (2.23.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - RNPaywalls (8.5.3):
+    - PurchasesHybridCommonUI (= 13.17.0)
+    - React-Core
   - RNPurchases (8.5.3):
     - PurchasesHybridCommon (= 13.17.0)
     - React-Core
@@ -1810,6 +1839,8 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
   - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -1817,7 +1848,9 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
     - RevenueCat
+    - RevenueCatUI
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -1970,6 +2003,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNGestureHandler:
+    :path: "../node_modules/react-native-gesture-handler"
+  RNPaywalls:
+    :path: "../node_modules/react-native-purchases-ui"
   RNPurchases:
     :path: "../node_modules/react-native-purchases"
   RNReanimated:
@@ -1995,6 +2032,7 @@ SPEC CHECKSUMS:
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
   hermes-engine: eb4a80f6bf578536c58a44198ec93a30f6e69218
   PurchasesHybridCommon: 8f8ae5a747a62e252fc271bb5c36932c5877b8e5
+  PurchasesHybridCommonUI: e367e2b92474cf3745ffb571e4e1c3fa83b0e1b2
   RCT-Folly: bf5c0376ffe4dd2cf438dcf86db385df9fdce648
   RCTDeprecation: 7691283dd69fed46f6653d376de6fa83aaad774c
   RCTRequired: eac044a04629288f272ee6706e31f81f3a2b4bfe
@@ -2053,7 +2091,10 @@ SPEC CHECKSUMS:
   ReactCodegen: 9a99ced51aab02909c7ab5056f33dff7054305bb
   ReactCommon: 04292c6f596181ebf755e7929d96d2148542b0e8
   RevenueCat: b7c34cdc66e4eaa854e56a56d0266261ed0822ca
+  RevenueCatUI: 4c09230cc81382edff00c889419eb1b0a0d4c2e7
   RNCAsyncStorage: a927b768986f83467b635cf6d7559e6edb46db7a
+  RNGestureHandler: 941f2746af261ff74f1e539d8b50f9f00f2edcea
+  RNPaywalls: 6fc00864d32003ed74933dcb7a853916ef98f728
   RNPurchases: f9f9d1428e317e19e8bf5927a220fabfe0e98c43
   RNReanimated: 9ee6347ca0aa3cf78cae715455e781728ae142e2
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748

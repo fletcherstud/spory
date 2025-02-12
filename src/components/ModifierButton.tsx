@@ -6,30 +6,36 @@ interface ModifierButtonProps {
   title: string;
   isSelected: boolean;
   onPress: () => void;
+  isPremium?: boolean;
+  isLocked?: boolean;
 }
 
-export default function ModifierButton({
+const ModifierButton = ({
   icon,
   title,
   isSelected,
   onPress,
-}: ModifierButtonProps) {
+  isPremium = false,
+  isLocked = false,
+}: ModifierButtonProps) => {
   return (
-    <TouchableOpacity onPress={onPress}>
-      <View
-        className={`flex-row items-center gap-1 px-3 py-2 rounded-full ${
-          isSelected
-            ? "bg-black border border-black"
-            : "bg-white border border-black"
-        }`}
+    <TouchableOpacity
+      onPress={onPress}
+      className={`px-3 py-1.5 rounded-full border flex-row items-center ${
+        isSelected ? "bg-black" : "bg-white"
+      } ${isLocked ? "opacity-50" : ""}`}
+    >
+      <Text className="text-base mr-1.5">{icon}</Text>
+      <Text
+        className={`${
+          isSelected ? "text-white" : "text-black"
+        } text-sm font-medium`}
       >
-        <Text>{icon}</Text>
-        <Text
-          className={`font-medium ${isSelected ? "text-white" : "text-black"}`}
-        >
-          {title}
-        </Text>
-      </View>
+        {title} {isPremium && "✨"}
+      </Text>
+      {isLocked && <Text className="ml-1.5 text-sm">🔒</Text>}
     </TouchableOpacity>
   );
-}
+};
+
+export default ModifierButton;

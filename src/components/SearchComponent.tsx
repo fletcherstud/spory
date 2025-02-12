@@ -1,18 +1,35 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
 import React, { useState } from "react";
 import ModifierButton from "./ModifierButton";
-import Animated from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { useAuth } from "../contexts/AuthContext";
+import { ScrollView } from "react-native-gesture-handler";
+import Purchases from "react-native-purchases";
+import RevenueCatUI from "react-native-purchases-ui";
 
-const modifiers = [
-  { icon: "😄", title: "Funny Fact" },
-  { icon: "🤯", title: "Crazy Fact" },
-  { icon: "🎲", title: "Random Fact" },
-  { icon: "💡", title: "Interesting Fact" },
-  { icon: "🔮", title: "Mysterious Fact" },
+interface Modifier {
+  icon: string;
+  title: string;
+  premium?: boolean;
+}
+
+const freeModifiers: Modifier[] = [
+  { icon: "😄", title: "Funny Fact", premium: false },
+  { icon: "🎲", title: "Random Fact", premium: false },
+  { icon: "💡", title: "Interesting Fact", premium: false },
 ];
 
+const premiumModifiers: Modifier[] = [
+  { icon: "🤯", title: "Crazy Fact", premium: true },
+  { icon: "🔮", title: "Mysterious Fact", premium: true },
+  { icon: "👻", title: "Spooky Fact", premium: true },
+  { icon: "🌳", title: "Nature Fact", premium: true },
+];
+
+const { width } = Dimensions.get("window");
+
 interface SearchComponentProps {
-  getLocationAndHistory: (modifier: string) => void;
+  getLocationAndHistory: (modifier: Modifier | null) => void;
   isLoading: boolean;
   buttonTitle: string;
 }
@@ -22,39 +39,134 @@ const SearchComponent = ({
   isLoading,
   buttonTitle,
 }: SearchComponentProps) => {
-  const [selectedModifier, setSelectedModifier] = useState<string | null>(null);
+  const [selectedModifier, setSelectedModifier] = useState<Modifier | null>(
+    null
+  );
+  const { user, signInWithApple } = useAuth();
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const handleScroll = (event: any) => {
+    const page = Math.round(event.nativeEvent.contentOffset.x / width);
+    setCurrentPage(page);
+  };
+
+  const handleModifierPress = async (modifier: Modifier) => {
+    if (modifier.premium) {
+      if (!user) {
+        Alert.alert(
+          "Sign In Required",
+          "Please sign in with Apple to access premium features.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Sign In",
+              onPress: async () => {
+                try {
+                  await signInWithApple();
+                  // After successful sign in, show the paywall if user is not premium
+                  if (!user?.isPremium) {
+                    const offerings = await Purchases.getOfferings();
+                    if (offerings.current?.availablePackages.length) {
+                      await RevenueCatUI.presentPaywall();
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error during sign in:", error);
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (!user.isPremium) {
+        try {
+          const offerings = await Purchases.getOfferings();
+          if (offerings.current?.availablePackages.length) {
+            await RevenueCatUI.presentPaywall();
+          }
+        } catch (e: any) {
+          console.error("Error showing paywall:", e?.message || e);
+        }
+        return;
+      }
+    }
+
+    setSelectedModifier(modifier);
+  };
+
   return (
     <View>
-      {/* Modifier section - now positioned at bottom */}
-      <View className="px-2">
+      <View className="px-4">
         <Text className="text-lg font-semibold mb-2">Try another version:</Text>
-        <View className="flex-row flex-wrap gap-1 gap-y-4">
-          {modifiers.map((modifier) => (
-            <ModifierButton
-              key={modifier.title}
-              icon={modifier.icon}
-              title={modifier.title}
-              isSelected={selectedModifier === modifier.title}
-              onPress={() =>
-                setSelectedModifier(
-                  selectedModifier === modifier.title ? null : modifier.title
-                )
-              }
-            />
-          ))}
-        </View>
-
-        <Animated.View className="mt-4">
-          <TouchableOpacity
-            className="mt-auto px-8 py-4 rounded-full text-center items-center bg-black border border-white"
-            onPress={() => getLocationAndHistory(selectedModifier)}
-            disabled={isLoading}
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          <View
+            style={{ width: width - 32 }}
+            className="flex-row flex-wrap gap-2"
           >
-            <Text className="text-white font-bold text-lg">
-              {selectedModifier ? `Get a ${selectedModifier}` : buttonTitle}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
+            {freeModifiers.map((modifier) => (
+              <ModifierButton
+                key={modifier.title}
+                icon={modifier.icon}
+                title={modifier.title}
+                isSelected={selectedModifier?.title === modifier.title}
+                onPress={() => handleModifierPress(modifier)}
+              />
+            ))}
+          </View>
+          <View
+            style={{ width: width - 32 }}
+            className="flex-row flex-wrap gap-2"
+          >
+            {premiumModifiers.map((modifier) => (
+              <ModifierButton
+                key={modifier.title}
+                icon={modifier.icon}
+                title={modifier.title}
+                isSelected={selectedModifier?.title === modifier.title}
+                onPress={() => handleModifierPress(modifier)}
+                isPremium={true}
+                isLocked={!user?.isPremium}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* <View className="absolute bottom-8 left-0 right-0 flex-row justify-center">
+        <View className="flex-row gap-1">
+          <View
+            className={`h-1.5 w-1.5 rounded-full ${
+              currentPage === 0 ? "bg-black" : "bg-gray-300"
+            }`}
+          />
+          <View
+            className={`h-1.5 w-1.5 rounded-full ${
+              currentPage === 1 ? "bg-black" : "bg-gray-300"
+            }`}
+          />
+        </View>
+      </View> */}
+      <View className="items-center">
+        <TouchableOpacity
+          className="px-8 py-4 mt-5 rounded-full text-center items-center bg-black border mb-8 w-11/12"
+          onPress={() => getLocationAndHistory(selectedModifier)}
+          disabled={isLoading}
+        >
+          <Text className="text-white font-bold text-lg">
+            {selectedModifier ? `Get a ${selectedModifier.title}` : buttonTitle}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

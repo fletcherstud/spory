@@ -79,7 +79,7 @@ export const Home = () => {
     processKeywords();
   }, [response]);
 
-  const getLocationAndHistory = async (modifier: string | null) => {
+  const getLocationAndHistory = async (modifierTitle: string | null) => {
     try {
       // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -98,7 +98,7 @@ export const Home = () => {
       const history = await getChatGPTResponse(
         latitude,
         longitude,
-        modifier || null
+        modifierTitle
       );
       setResponse(history);
     } catch (error) {
@@ -115,8 +115,10 @@ export const Home = () => {
 
   const isLoadingOrProcessing = isLoading || isProcessingKeywords;
 
-  const handlePremiumFeature = async (modifier: string | null) => {
-    if (modifier && !user) {
+  const handlePremiumFeature = async (
+    modifier: { title: string; premium?: boolean } | null
+  ) => {
+    if (modifier?.premium && !user) {
       Alert.alert(
         "Premium Feature",
         "Sign in with Apple to access premium features like custom fact types!",
@@ -129,7 +131,7 @@ export const Home = () => {
             text: "Sign In",
             onPress: async () => {
               await signInWithApple();
-              await getLocationAndHistory(modifier);
+              await getLocationAndHistory(modifier.title);
             },
           },
         ]
@@ -137,11 +139,11 @@ export const Home = () => {
       return;
     }
 
-    await getLocationAndHistory(modifier);
+    await getLocationAndHistory(modifier?.title || null);
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1">
       {hasInitialResponse ? (
         <View className="flex-1">
           <View className="flex-row justify-between items-center px-4 py-2">
@@ -190,6 +192,15 @@ export const Home = () => {
             isLoading={isLoadingOrProcessing}
             keywordsData={keywordsData}
           />
+          {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
+            <Animated.View className="mt-auto" exiting={FadeOutDown}>
+              <SearchComponent
+                getLocationAndHistory={handlePremiumFeature}
+                isLoading={isLoadingOrProcessing}
+                buttonTitle="Get a Fact"
+              />
+            </Animated.View>
+          )}
         </View>
       ) : (
         <View className="flex-1">
@@ -264,17 +275,16 @@ export const Home = () => {
                 <LoadingSpinner size={48} />
               </Animated.View>
             )}
-
-            {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
-              <Animated.View className="mt-auto" exiting={FadeOutDown}>
-                <SearchComponent
-                  getLocationAndHistory={handlePremiumFeature}
-                  isLoading={isLoadingOrProcessing}
-                  buttonTitle="Get a Fact"
-                />
-              </Animated.View>
-            )}
           </View>
+          {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
+            <Animated.View className="mt-auto" exiting={FadeOutDown}>
+              <SearchComponent
+                getLocationAndHistory={handlePremiumFeature}
+                isLoading={isLoadingOrProcessing}
+                buttonTitle="Get a Fact"
+              />
+            </Animated.View>
+          )}
         </View>
       )}
     </SafeAreaView>
