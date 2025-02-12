@@ -13,7 +13,7 @@ export const usePremiumFeature = () => {
     if (!user) {
       Alert.alert(
         "Sign In Required",
-        "Please sign in with Apple to access premium features.",
+        "Sign in with Apple to access premium features!",
         [
           {
             text: "Cancel",
@@ -24,7 +24,7 @@ export const usePremiumFeature = () => {
             onPress: async () => {
               try {
                 await signInWithApple();
-                // Get the updated user state after sign in
+                // After sign in, check if they're premium
                 const customerInfo = await Purchases.getCustomerInfo();
                 const isPremium = customerInfo.entitlements.active["Pro"]?.isActive;
 
@@ -35,7 +35,7 @@ export const usePremiumFeature = () => {
                     await RevenueCatUI.presentPaywall();
                   }
                 } else {
-                  // If premium, continue with the original request
+                  // If premium, proceed with the action
                   await onSuccess();
                 }
               } catch (error) {
@@ -75,5 +75,9 @@ export const usePremiumFeature = () => {
     await onSuccess();
   };
 
-  return { attemptPremiumFeature };
+  const canAccessPremiumFeature = (): boolean => {
+    return user?.isPremium ?? false;
+  };
+
+  return { attemptPremiumFeature, canAccessPremiumFeature };
 }; 

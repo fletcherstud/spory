@@ -45,6 +45,8 @@ const SearchComponent = ({
     null
   );
   const { user } = useAuth();
+  const { canAccessPremiumFeature, attemptPremiumFeature } =
+    usePremiumFeature();
   const [currentPage, setCurrentPage] = useState(0);
 
   const handleScroll = (event: any) => {
@@ -53,6 +55,15 @@ const SearchComponent = ({
   };
 
   const handleModifierPress = async (modifier: Modifier) => {
+    if (modifier.premium) {
+      await attemptPremiumFeature(async () => {
+        setSelectedModifier(
+          selectedModifier?.title === modifier.title ? null : modifier
+        );
+      });
+      return;
+    }
+
     setSelectedModifier(
       selectedModifier?.title === modifier.title ? null : modifier
     );
@@ -97,7 +108,7 @@ const SearchComponent = ({
                 isSelected={selectedModifier?.title === modifier.title}
                 onPress={() => handleModifierPress(modifier)}
                 isPremium={true}
-                isLocked={!user?.isPremium}
+                isLocked={!canAccessPremiumFeature()}
               />
             ))}
           </View>

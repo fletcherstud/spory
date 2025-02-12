@@ -24,6 +24,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { extractKeywords } from "../services/Compromise";
 import SignInButton from "../components/SignInButton";
 import { usePremiumFeature } from "../hooks/usePremiumFeature";
+import { useFactLimit } from "../hooks/useFactLimit";
+import FactsLeftText from "../components/FactsLeftText";
 
 interface WikiData {
   keyword: string;
@@ -37,6 +39,7 @@ interface WikiData {
 export const Home = () => {
   const { user, signInWithApple, signOut, isSigningIn } = useAuth();
   const { attemptPremiumFeature } = usePremiumFeature();
+  const { canGetFact, incrementFactCount, remainingFacts } = useFactLimit();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string>("");
   const [keywordsData, setKeywordsData] = useState<WikiData[]>([]);
@@ -120,6 +123,10 @@ export const Home = () => {
   const handlePremiumFeature = async (
     modifier: { title: string; premium?: boolean } | null
   ) => {
+    // Check if user can get a fact
+    const allowed = await canGetFact();
+    if (!allowed) return;
+
     if (modifier?.premium) {
       await attemptPremiumFeature(async () => {
         await getLocationAndHistory(modifier.title);
@@ -128,6 +135,7 @@ export const Home = () => {
     }
 
     await getLocationAndHistory(modifier?.title || null);
+    await incrementFactCount();
   };
 
   return (
@@ -162,15 +170,19 @@ export const Home = () => {
                 <Text className="text-sm font-semibold mr-2">
                   {user.fullName || user.email || "User"}
                 </Text>
-                <Text className="text-xs text-gray-500">
-                  {user.isPremium ? "Pro" : "Free"}
-                </Text>
+                <FactsLeftText
+                  remainingFacts={remainingFacts}
+                  isPremium={user.isPremium}
+                />
               </TouchableOpacity>
             ) : (
-              <SignInButton
-                signInWithApple={signInWithApple}
-                isSigningIn={isSigningIn}
-              />
+              <View className="flex-row items-center gap-2">
+                <FactsLeftText remainingFacts={remainingFacts} />
+                <SignInButton
+                  signInWithApple={signInWithApple}
+                  isSigningIn={isSigningIn}
+                />
+              </View>
             )}
           </View>
           <ResponseComponent
@@ -217,15 +229,19 @@ export const Home = () => {
                 <Text className="text-sm font-semibold mr-2">
                   {user.fullName || user.email || "User"}
                 </Text>
-                <Text className="text-xs text-gray-500">
-                  {user.isPremium ? "Pro" : "Free"}
-                </Text>
+                <FactsLeftText
+                  remainingFacts={remainingFacts}
+                  isPremium={user.isPremium}
+                />
               </TouchableOpacity>
             ) : (
-              <SignInButton
-                signInWithApple={signInWithApple}
-                isSigningIn={isSigningIn}
-              />
+              <View className="flex-row items-center gap-2">
+                <FactsLeftText remainingFacts={remainingFacts} />
+                <SignInButton
+                  signInWithApple={signInWithApple}
+                  isSigningIn={isSigningIn}
+                />
+              </View>
             )}
           </View>
           <View className="flex-1 items-center justify-center">
