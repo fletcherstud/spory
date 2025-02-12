@@ -130,6 +130,25 @@ export const extractKeywords = async (text) => {
 
   // Use compromise-wikipedia to find entities with Wikipedia articles
   let wikiEntities = doc.wikipedia().json();
+  // Get person entities using compromise
+  let persons = doc.people().json();
+
+  // Combine Wikipedia entities and persons, removing duplicates
+  let combinedEntities = [...wikiEntities];
+
+  // Add persons that aren't already in wikiEntities
+  for (const person of persons) {
+    if (
+      !wikiEntities.some(
+        (entity) => entity.text.toLowerCase() === person.text.toLowerCase()
+      )
+    ) {
+      combinedEntities.push(person);
+    }
+  }
+
+  // Update wikiEntities with the combined list
+  wikiEntities = combinedEntities;
   console.log("Wikipedia Entities:", wikiEntities);
 
   const validKeywordsData = [];
