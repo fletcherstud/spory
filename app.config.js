@@ -14,7 +14,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.jonathanmfletcher.sporyai",
-      buildNumber: "6",
+      buildNumber: "7",
       supportsTablet: true,
       usesAppleSignIn: true,
     },
