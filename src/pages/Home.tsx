@@ -26,6 +26,9 @@ import SignInButton from "../components/SignInButton";
 import { usePremiumFeature } from "../hooks/usePremiumFeature";
 import { useFactLimit } from "../hooks/useFactLimit";
 import FactsLeftText from "../components/FactsLeftText";
+import { searchLocations } from '../services/RadarService';
+import { RadarAddress } from '../types/radar';
+import { LocationSearch } from '../components/LocationSearch';
 
 interface WikiData {
   keyword: string;
@@ -47,7 +50,9 @@ export const Home = () => {
   const [hasLocationPermission, setHasLocationPermission] =
     useState<Location.PermissionStatus | null>(null);
   const [hasInitialResponse, setHasInitialResponse] = useState(false);
-
+  const [selectedLocation, setSelectedLocation] = useState<RadarAddress | null>(null);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  console.log(selectedLocation)
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
     setHasLocationPermission(status);
@@ -83,26 +88,35 @@ export const Home = () => {
 
     processKeywords();
   }, [response]);
-
-  const getLocationAndHistory = async (modifierTitle: string | null) => {
+  
+  const getLocationAndHistory = async (
+    modifierTitle: string | null,
+    customCoords?: { latitude: number; longitude: number }
+  ) => {
     try {
-      // Request location permissions
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setHasLocationPermission(status);
-
-      if (status !== "granted") {
-        return;
-      }
       setIsLoading(true);
+      let coords;
+      if (selectedLocation) { 
+        console.log("Using selected location:", selectedLocation);
+        coords = {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude
+        };
+      } else {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        setHasLocationPermission(status);
 
-      // Get current location
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
+        if (status !== "granted") {
+          return;
+        }
 
-      // Get history from ChatGPT
+        const location = await Location.getCurrentPositionAsync({});
+        coords = location.coords;
+      }
+
       const history = await getChatGPTResponse(
-        latitude,
-        longitude,
+        coords.latitude,
+        coords.longitude,
         modifierTitle
       );
       setResponse(history);
@@ -136,6 +150,52 @@ export const Home = () => {
 
     await getLocationAndHistory(modifier?.title || null);
     await incrementFactCount();
+  };
+
+  const handleLocationSelect = (location: RadarAddress) => {
+    console.log("Setting location",location);
+    setSelectedLocation(location);
+    setIsSearchingLocation(false);
+  };
+
+  const handleCloseLocationSearch = () => {
+    setIsSearchingLocation(false);
+  };
+  const LocationText = () => {
+    if (selectedLocation) {
+      return (
+        <TouchableOpacity onPress={() => setIsSearchingLocation(true)}>
+          <Text className="mt-2 text-gray-500">
+            📍 {selectedLocation.formattedAddress}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (user?.isPremium) {
+      return (
+        <>
+          <TouchableOpacity onPress={() => setIsSearchingLocation(true)}>
+            <Text className="mt-2 text-blue-500">
+              Set Location Anywhere
+            </Text>
+          </TouchableOpacity>
+          <LocationSearch 
+            isVisible={isSearchingLocation}
+            onClose={handleCloseLocationSearch}
+            onSelectLocation={handleLocationSelect}
+          />
+        </>
+      );
+    }
+
+    return (
+      <TouchableOpacity onPress={() => attemptPremiumFeature(() => {})}>
+        <Text className="mt-2 text-blue-500">
+          Unlock Premium
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -252,6 +312,7 @@ export const Home = () => {
             <Text className="mt-4 text-gray-400 text-xl">
               Discover yours now
             </Text>
+            <LocationText />
 
             {hasLocationPermission === "denied" && (
               <View className="mt-8 px-4">
@@ -291,6 +352,11 @@ export const Home = () => {
           )}
         </View>
       )}
+      <LocationSearch 
+        isVisible={isSearchingLocation}
+        onClose={handleCloseLocationSearch}
+        onSelectLocation={handleLocationSelect}
+      />
     </SafeAreaView>
   );
 };

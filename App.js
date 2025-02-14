@@ -7,13 +7,40 @@ import Purchases from "react-native-purchases";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import "./src/firebase/config";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useState, useEffect } from "react";
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the splash screen visible while we initialize
+SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
+  const [appIsReady, setAppIsReady] = useState(false);
 
-  Purchases.configure({
-    apiKey: process.env.REVENUE_CAT,
-  });
+  useEffect(() => {
+    async function initialize() {
+      try {
+        // Configure RevenueCat
+        Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
+        await Purchases.configure({
+          apiKey: process.env.REVENUE_CAT,
+        });
+        
+       await Radar.initialize(process.env.RADAR_API_KEY);
+        
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setAppIsReady(true);
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    initialize();
+  }, []);
+
+  if (!appIsReady) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

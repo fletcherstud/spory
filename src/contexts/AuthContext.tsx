@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
 
   // Function to update user's premium status
   const updatePremiumStatus = async () => {
@@ -283,11 +284,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      // Log out of RevenueCat first
+      setHasAttemptedRestore(false);
+      
       console.log("Logging out of RevenueCat...");
       await Purchases.logOut();
 
-      // Then sign out of Firebase
       console.log("Signing out of Firebase...");
       await firebaseSignOut(auth);
 
@@ -304,10 +305,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const checkPremiumStatus = async () => {
     try {
-      // First sync with store to ensure latest status
-      await Purchases.syncPurchases();
+      // Only try to sync if we haven't already attempted
+      if (!hasAttemptedRestore) {
+        try {
+          await Purchases.syncPurchases();
+          setHasAttemptedRestore(true);
+        } catch (error) {
+          console.log("Failed to sync purchases:", error);
+          // Don't throw here, continue to check customer info
+        }
+      }
 
-      // Get fresh customer info after sync
+      // Get customer info without forcing a sync
       const customerInfo = await Purchases.getCustomerInfo();
       console.log("Full customer info:", JSON.stringify(customerInfo, null, 2));
 
@@ -331,7 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Add syncPurchases to the context interface
+  // Update the syncPurchases function
   const syncPurchases = async () => {
     try {
       console.log("Starting purchase sync...");
@@ -353,9 +362,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      // Sync purchases with store
-      console.log("Syncing purchases with store...");
-      await Purchases.syncPurchases();
+      // Only try to sync if we haven't already attempted
+      if (!hasAttemptedRestore) {
+        try {
+          console.log("Syncing purchases with store...");
+          await Purchases.syncPurchases();
+          setHasAttemptedRestore(true);
+        } catch (error) {
+          console.log("Failed to sync purchases:", error);
+          // Continue to get customer info
+        }
+      }
 
       // Get latest customer info
       const customerInfo = await Purchases.getCustomerInfo();
@@ -371,11 +388,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return wasUpdated;
     } catch (error) {
       console.error("Error during purchase sync:", error);
-      Alert.alert(
-        "Sync Error",
-        "There was an error syncing your purchases. Please try again.",
-        [{ text: "OK" }]
-      );
       return false;
     }
   };

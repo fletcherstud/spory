@@ -14,7 +14,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.jonathanmfletcher.sporyai",
-      buildNumber: "4",
+      buildNumber: "6",
       supportsTablet: true,
       usesAppleSignIn: true,
     },
@@ -36,6 +36,7 @@ module.exports = {
         },
       ],
       "expo-apple-authentication",
+      "react-native-radar",
     ],
     extra: {
       firebaseApiKey: process.env.FIREBASE_API_KEY,
@@ -45,9 +46,7 @@ module.exports = {
       firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
       firebaseAppId: process.env.FIREBASE_APP_ID,
       revenueCat: process.env.REVENUE_CAT,
-      eas: {
-        projectId: "your-project-id",
-      },
+      radarApiKey: process.env.RADAR_API_KEY,
     },
   },
 };
