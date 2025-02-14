@@ -8,6 +8,7 @@ import {
   Linking,
   SafeAreaView,
   Alert,
+  FlatList,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import Animated, {
@@ -29,6 +30,12 @@ import FactsLeftText from "../components/FactsLeftText";
 import { searchLocations } from '../services/RadarService';
 import { RadarAddress } from '../types/radar';
 import { LocationSearch } from '../components/LocationSearch';
+import { HistoryCard } from '../components/HistoryCard';
+import { HistoryItem } from '../types/user';
+import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
+import { Timestamp } from 'firebase/firestore';
+import { HistoryCarousel } from '../components/HistoryCarousel';
 
 interface WikiData {
   keyword: string;
@@ -52,7 +59,9 @@ export const Home = () => {
   const [hasInitialResponse, setHasInitialResponse] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<RadarAddress | null>(null);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  console.log(selectedLocation)
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
+  const [currentModifier, setCurrentModifier] = useState<string | null>(null);
+
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
     setHasLocationPermission(status);
@@ -107,7 +116,7 @@ export const Home = () => {
         setHasLocationPermission(status);
 
         if (status !== "granted") {
-          return;
+          throw new Error("Location permission denied");
         }
 
         const location = await Location.getCurrentPositionAsync({});
@@ -120,9 +129,20 @@ export const Home = () => {
         modifierTitle
       );
       setResponse(history);
+      
+      if (user?.isPremium) {
+        const keywords = await extractKeywords(history);
+        const firstThumbnail = keywords.find(k => k.thumbnail)?.thumbnail || null;
+      }
+      setCurrentModifier(modifierTitle);
     } catch (error) {
-      alert("Failed to get location history");
       setIsLoading(false);
+      if (error.message === "Location permission denied") {
+        alert("Location permission is required to get facts");
+      } else {
+        alert("Failed to get location history");
+      }
+      throw error; // Re-throw to prevent fact count increment
     }
   };
 
@@ -141,15 +161,21 @@ export const Home = () => {
     const allowed = await canGetFact();
     if (!allowed) return;
 
-    if (modifier?.premium) {
-      await attemptPremiumFeature(async () => {
-        await getLocationAndHistory(modifier.title);
-      });
-      return;
+    try {
+      if (modifier?.premium) {
+        await attemptPremiumFeature(async () => {
+          await getLocationAndHistory(modifier.title);
+        });
+      } else {
+        await getLocationAndHistory(modifier?.title || null);
+      }
+      
+      // Only increment fact count after successful response
+      await incrementFactCount();
+    } catch (error) {
+      console.error('Error getting fact:', error);
+      // Don't increment fact count on error
     }
-
-    await getLocationAndHistory(modifier?.title || null);
-    await incrementFactCount();
   };
 
   const handleLocationSelect = (location: RadarAddress) => {
@@ -161,10 +187,29 @@ export const Home = () => {
   const handleCloseLocationSearch = () => {
     setIsSearchingLocation(false);
   };
+
+  const handleHistorySelect = async (item: HistoryItem) => {
+    setResponse(item.response);
+    setIsLoading(true);
+    setSelectedHistoryItem(item);
+    setIsProcessingKeywords(true);
+    try {
+      const extracted = await extractKeywords(item.response);
+      setKeywordsData(extracted);
+      setHasInitialResponse(true);
+    } catch (error) {
+      console.error("Error extracting keywords:", error);
+      setKeywordsData([]);
+    } finally {
+      setIsProcessingKeywords(false);
+      setIsLoading(false);
+    }
+  };
+
   const LocationText = () => {
     if (selectedLocation) {
       return (
-        <TouchableOpacity onPress={() => setIsSearchingLocation(true)}>
+        <TouchableOpacity disabled={isLoadingOrProcessing} onPress={() => setIsSearchingLocation(true)}>
           <Text className="mt-2 text-gray-500">
             📍 {selectedLocation.formattedAddress}
           </Text>
@@ -175,7 +220,7 @@ export const Home = () => {
     if (user?.isPremium) {
       return (
         <>
-          <TouchableOpacity onPress={() => setIsSearchingLocation(true)}>
+          <TouchableOpacity disabled={isLoadingOrProcessing} onPress={() => setIsSearchingLocation(true)}>
             <Text className="mt-2 text-blue-500">
               Set Location Anywhere
             </Text>
@@ -251,6 +296,9 @@ export const Home = () => {
             getLocationAndHistory={handlePremiumFeature}
             isLoading={isLoadingOrProcessing}
             keywordsData={keywordsData}
+            selectedLocation={selectedLocation}
+            isHistoryView={!!selectedHistoryItem}
+            modifier={currentModifier}
           />
           {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
             <Animated.View className="mt-auto" exiting={FadeOutDown}>
@@ -304,7 +352,7 @@ export const Home = () => {
               </View>
             )}
           </View>
-          <View className="flex-1 items-center justify-center">
+          <View className="flex-1 items-center mt-10">
             <Text className="text-4xl font-bold text-center">
               Every <Text className="font-black">Spot</Text> has a{"\n"}
               <Text className="font-black">Story</Text>
@@ -313,6 +361,7 @@ export const Home = () => {
               Discover yours now
             </Text>
             <LocationText />
+          
 
             {hasLocationPermission === "denied" && (
               <View className="mt-8 px-4">
@@ -331,7 +380,7 @@ export const Home = () => {
               </View>
             )}
 
-            {isLoadingOrProcessing && (
+            {isLoadingOrProcessing ? (
               <Animated.View
                 className="flex items-center mt-8"
                 exiting={FadeOutDown}
@@ -339,6 +388,15 @@ export const Home = () => {
               >
                 <LoadingSpinner size={48} />
               </Animated.View>
+            ) : (
+                <>
+                {user?.isPremium && (
+                              <HistoryCarousel 
+                                history={user.history}
+                                onPress={handleHistorySelect}
+                              />
+                            )}
+                </>
             )}
           </View>
           {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (

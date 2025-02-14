@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Purchases from "react-native-purchases";
-import { getFirestore, Timestamp } from "firebase/firestore";
+import { getFirestore, Timestamp, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import {
   getAuth,
@@ -14,6 +14,7 @@ import {
 import app from "../firebase/config";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, Alert } from "react-native";
+import { HistoryItem } from "../types/user";
 
 interface User {
   id: string;
@@ -21,10 +22,12 @@ interface User {
   fullName: string | null;
   isPremium: boolean;
   lastLogoutAt?: Timestamp;
+  history?: HistoryItem[];
 }
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   isLoading: boolean;
   isSigningIn: boolean;
   signInWithApple: () => Promise<void>;
@@ -32,6 +35,7 @@ interface AuthContextType {
   checkPremiumStatus: () => Promise<boolean>;
   setIsSigningIn: (value: boolean) => void;
   syncPurchases: () => Promise<boolean>;
+  loadMoreHistory: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
+  const HISTORY_BATCH_SIZE = 5;
 
   // Function to update user's premium status
   const updatePremiumStatus = async () => {
@@ -118,37 +123,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [user]);
 
+  // Remove the separate restore effect and combine with onAuthStateChanged
   useEffect(() => {
-    // Start syncing with Firebase
     setIsSigningIn(true);
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        // User is signed in
-        try {
+      try {
+        if (firebaseUser) {
+          console.log("Firebase user found:", firebaseUser.uid);
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const isPremium = await checkPremiumStatus();
+
+            // Only load history for premium users
+            let historyItems: HistoryItem[] = [];
+            if (isPremium) {
+              const historyRef = collection(db, 'users', firebaseUser.uid, 'history');
+              const q = query(
+                historyRef,
+                orderBy('timestamp', 'desc'),
+                limit(HISTORY_BATCH_SIZE)
+              );
+              
+              const snapshot = await getDocs(q);
+              historyItems = snapshot.docs.map(doc => doc.data() as HistoryItem);
+            }
+            
             setUser({
               id: firebaseUser.uid,
               email: userData.email,
               fullName: userData.fullName,
               isPremium,
+              history: historyItems
             });
           }
-        } catch (error) {
-          console.error("Error restoring user session:", error);
+        } else {
+          console.log("No Firebase user found");
           setUser(null);
         }
-      } else {
-        // User is signed out
+      } catch (error) {
+        console.error("Error restoring user session:", error);
         setUser(null);
+      } finally {
+        setIsLoading(false);
+        setIsSigningIn(false);
       }
-      setIsLoading(false);
-      setIsSigningIn(false);
     });
 
-    // Cleanup subscription
     return () => unsubscribe();
   }, []);
 
@@ -175,9 +197,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const userRef = doc(db, "users", userData.id);
       const userDoc = await getDoc(userRef);
-
-      if (!userDoc.exists()) {
-        // Create new user document
+      
+      // If user exists, preserve their history
+      if (userDoc.exists()) {
+        const existingData = userDoc.data();
+        console.log("Existing data:", existingData);
+        await setDoc(
+          userRef,
+          {
+            email: userData.email || null,
+            fullName: userData.fullName || null,
+            isPremium: userData.isPremium,
+            lastLoginAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+            // Don't overwrite history if it exists
+            ...(existingData.history && { history: existingData.history }),
+          },
+          { merge: true }
+        );
+      } else {
+        // New user
         await setDoc(userRef, {
           email: userData.email || null,
           fullName: userData.fullName || null,
@@ -186,12 +225,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           lastLoginAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         });
-      } else {
-        // Update existing user's login time
-        await updateUserInFirestore(userData);
       }
     } catch (error) {
-      console.error("Error creating user in Firestore:", error);
+      console.error("Error creating/updating user in Firestore:", error);
     }
   };
 
@@ -244,24 +280,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isPremium: false,
       };
 
-      // Log in to RevenueCat with the Firebase UID
+      // Log in to RevenueCat and sync purchases
       console.log("Logging into RevenueCat with user ID:", firebaseUser.uid);
       await Purchases.logIn(firebaseUser.uid);
-
       await Purchases.setAttributes({
         email: newUser.email,
         name: newUser.fullName,
       });
-
-      // Force a sync after login
-      console.log("Forcing initial sync after login...");
       await Purchases.syncPurchases();
 
       newUser.isPremium = await checkPremiumStatus();
       await createUserInFirestore(newUser);
-      console.log("User created/updated in Firestore");
 
-      setUser(newUser);
+      // Only load history for premium users
+      let historyItems: HistoryItem[] = [];
+      if (newUser.isPremium) {
+        const historyRef = collection(db, 'users', firebaseUser.uid, 'history');
+        const q = query(
+          historyRef,
+          orderBy('timestamp', 'desc'),
+          limit(HISTORY_BATCH_SIZE)
+        );
+        
+        const snapshot = await getDocs(q);
+        historyItems = snapshot.docs.map(doc => doc.data() as HistoryItem);
+      }
+
+      // Set user with history
+      setUser({
+        ...newUser,
+        history: historyItems
+      });
+
+      console.log("User created/updated in Firestore with history:", historyItems);
     } catch (error) {
       if (error.code === "ERR_CANCELED") {
         console.log("User cancelled Apple sign in");
@@ -392,10 +443,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const loadMoreHistory = async () => {
+    if (!user) return;
+
+    try {
+      const historyRef = collection(db, 'users', user.id, 'history');
+      const q = query(
+        historyRef,
+        orderBy('timestamp', 'desc'),
+        limit(HISTORY_BATCH_SIZE)
+      );
+
+      const snapshot = await getDocs(q);
+      const historyItems = snapshot.docs.map(doc => doc.data() as HistoryItem);
+
+      setUser(prev => ({
+        ...prev!,
+        history: historyItems
+      }));
+    } catch (error) {
+      console.error('Error loading history:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isLoading,
         isSigningIn,
         signInWithApple,
@@ -403,6 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         checkPremiumStatus,
         setIsSigningIn,
         syncPurchases,
+        loadMoreHistory,
       }}
     >
       {children}
