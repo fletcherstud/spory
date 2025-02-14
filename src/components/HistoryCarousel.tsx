@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, Dimensions } from 'react-native';
 import { HistoryItem } from '../types/user';
 import { HistoryCard } from './HistoryCard';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Props {
   history?: HistoryItem[];
@@ -12,6 +13,9 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7; // Card takes up 70% of screen width
 
 export const HistoryCarousel = ({ history, onPress }: Props) => {
+  const { loadMoreHistory } = useAuth();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   if (!history?.length) {
     return (
       <View className="mx-4 my-6">
@@ -22,14 +26,22 @@ export const HistoryCarousel = ({ history, onPress }: Props) => {
     );
   }
 
+  const handleEndReached = async () => {
+    console.log("handleEndReached");
+    if (!isLoadingMore) {
+      setIsLoadingMore(true);
+      await loadMoreHistory();
+      setIsLoadingMore(false);
+    }
+  };
+
   const sortedHistory = [...history].sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-  const recentHistory = sortedHistory.slice(0, 3);
 
   return (
     <View className="">
       <Text className="text-lg font-semibold mb-2 mx-4">History</Text>
       <FlatList
-        data={recentHistory}
+        data={sortedHistory}
         horizontal
         pagingEnabled={false}
         showsHorizontalScrollIndicator={false}
@@ -42,6 +54,8 @@ export const HistoryCarousel = ({ history, onPress }: Props) => {
           </View>
         )}
         keyExtractor={(item) => item.timestamp.toString()}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );

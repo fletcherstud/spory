@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Purchases from "react-native-purchases";
-import { getFirestore, Timestamp, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { getFirestore, Timestamp, collection, query, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import {
   getAuth,
@@ -59,7 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
-  const HISTORY_BATCH_SIZE = 5;
+  const HISTORY_BATCH_SIZE = 2;
+  const [lastVisibleDoc, setLastVisibleDoc] = useState<any>(null);
 
   // Function to update user's premium status
   const updatePremiumStatus = async () => {
@@ -343,6 +344,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("Signing out of Firebase...");
       await firebaseSignOut(auth);
 
+      setLastVisibleDoc(null);
       setUser(null);
     } catch (error) {
       console.error("Error during sign out:", error);
@@ -444,22 +446,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const loadMoreHistory = async () => {
-    if (!user) return;
+    if (!user || !user.isPremium) return;
 
     try {
       const historyRef = collection(db, 'users', user.id, 'history');
-      const q = query(
+      let q = query(
         historyRef,
         orderBy('timestamp', 'desc'),
         limit(HISTORY_BATCH_SIZE)
       );
 
+      // If we have a last document, start after it
+      if (lastVisibleDoc) {
+        q = query(
+          historyRef,
+          orderBy('timestamp', 'desc'),
+          startAfter(lastVisibleDoc),
+          limit(HISTORY_BATCH_SIZE)
+        );
+      }
+
       const snapshot = await getDocs(q);
-      const historyItems = snapshot.docs.map(doc => doc.data() as HistoryItem);
+      
+      // If no more documents, return
+      if (snapshot.empty) return;
+
+      // Save the last visible document for next query
+      setLastVisibleDoc(snapshot.docs[snapshot.docs.length - 1]);
+
+      const newHistoryItems = snapshot.docs.map(doc => doc.data() as HistoryItem);
 
       setUser(prev => ({
         ...prev!,
-        history: historyItems
+        history: lastVisibleDoc 
+          ? [...(prev?.history || []), ...newHistoryItems]
+          : newHistoryItems
       }));
     } catch (error) {
       console.error('Error loading history:', error);
@@ -485,3 +506,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     </AuthContext.Provider>
   );
 };
+
