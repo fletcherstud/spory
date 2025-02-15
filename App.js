@@ -9,6 +9,7 @@ import "./src/firebase/config";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useState, useEffect } from "react";
 import * as SplashScreen from 'expo-splash-screen';
+import Radar from 'react-native-radar';
 
 // Keep the splash screen visible while we initialize
 SplashScreen.preventAutoHideAsync();

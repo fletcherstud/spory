@@ -1,6 +1,6 @@
 import { OPENAI_API_KEY } from "@env";
 
-const systemContent = `Provide a fact based on a given latitude and longitude. The response should be factual, objective, and concise, similar to an encyclopedia entry. The fact should be interesting and not obvious.
+const systemContent = `You are a Trivia Master.Provide a fact based on a given latitude and longitude. The response should be factual, objective, and concise, similar to an encyclopedia entry. The fact should be interesting and not obvious.
 
 # Output Rules
 
