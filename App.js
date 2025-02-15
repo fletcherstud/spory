@@ -22,11 +22,11 @@ export default function App() {
       try {
         // Configure RevenueCat
         Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
-        await Purchases.configure({
+        Purchases.configure({
           apiKey: process.env.REVENUE_CAT,
         });
         
-       await Radar.initialize(process.env.RADAR_API_KEY);
+        Radar.initialize(process.env.RADAR_API_KEY);
         
       } catch (e) {
         console.warn(e);

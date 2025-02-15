@@ -20,6 +20,7 @@ interface WikiImageCarouselProps {
     title: string;
     extract: string;
     url: string | null;
+    position?: number;
   }>;
   onCenterItemChange?: (keyword: string) => void;
   scrollToKeyword?: string | null;
@@ -42,9 +43,14 @@ const WikiImageCarousel: React.FC<WikiImageCarouselProps> = ({
   // Calculate the padding needed to center the first and last items
   const sideInsets = (windowWidth - imageWidth - SPACING) / 2;
 
-  // Sort the data to put items with thumbnails first
+  // Sort the data by original position
   const sortedKeywordsData = React.useMemo(() => {
     return [...keywordsData].sort((a, b) => {
+      // If positions are available, use them
+      if (a.position !== undefined && b.position !== undefined) {
+        return a.position - b.position;
+      }
+      // Fallback to thumbnail-based sorting if positions aren't available
       if (a.thumbnail && !b.thumbnail) return -1;
       if (!a.thumbnail && b.thumbnail) return 1;
       return 0;
