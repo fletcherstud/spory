@@ -17,7 +17,7 @@ const FactsLeftText = ({ remainingFacts, isPremium }: FactsLeftTextProps) => {
         remainingFacts === 0 ? "text-red-500" : "text-gray-500"
       }`}
     >
-      {remainingFacts} facts left
+      {remainingFacts} facts left today
     </Text>
   );
 };

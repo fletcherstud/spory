@@ -1,11 +1,8 @@
 import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
 import React, { useState } from "react";
 import ModifierButton from "./ModifierButton";
-import Animated, { FadeIn } from "react-native-reanimated";
 import { useAuth } from "../contexts/AuthContext";
 import { ScrollView } from "react-native-gesture-handler";
-import Purchases from "react-native-purchases";
-import RevenueCatUI from "react-native-purchases-ui";
 import { usePremiumFeature } from "../hooks/usePremiumFeature";
 
 interface Modifier {

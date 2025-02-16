@@ -4,7 +4,6 @@ import Purchases from "react-native-purchases";
 import { getFirestore, Timestamp, collection, query, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import {
-  getAuth,
   signInWithCredential,
   OAuthProvider,
   signOut as firebaseSignOut,

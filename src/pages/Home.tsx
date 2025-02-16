@@ -1,19 +1,15 @@
-import { StatusBar } from "expo-status-bar";
 import { useState, useEffect, useCallback } from "react";
 import {
   Text,
   View,
   TouchableOpacity,
-  Image,
   Linking,
   SafeAreaView,
   Alert,
-  FlatList,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import Animated, {
   FadeOutDown,
-  FadeIn,
   FadeInDown,
 } from "react-native-reanimated";
 import { getChatGPTResponse } from "../services/ChatGpt";
@@ -27,14 +23,9 @@ import SignInButton from "../components/SignInButton";
 import { usePremiumFeature } from "../hooks/usePremiumFeature";
 import { useFactLimit } from "../hooks/useFactLimit";
 import FactsLeftText from "../components/FactsLeftText";
-import { searchLocations } from '../services/RadarService';
 import { RadarAddress } from '../types/radar';
 import { LocationSearch } from '../components/LocationSearch';
-import { HistoryCard } from '../components/HistoryCard';
 import { HistoryItem } from '../types/user';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
-import { Timestamp } from 'firebase/firestore';
 import { HistoryCarousel } from '../components/HistoryCarousel';
 
 interface WikiData {

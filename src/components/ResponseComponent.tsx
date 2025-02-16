@@ -37,6 +37,10 @@ interface ResponseComponentProps {
   modifier?: string;
 }
 
+const cleanResponse = (text: string) => {
+  return text.replace(/\*\*/g, '');
+};
+
 export default function ResponseComponent({
   response,
   clearResponse,
@@ -133,7 +137,7 @@ export default function ResponseComponent({
 
           <View className="px-4 pb-4">
             <HighlightKeywordsText
-              text={response}
+              text={cleanResponse(response)}
               keywords={keywords}
               centeredKeyword={centeredKeyword}
               onKeywordPress={handleKeywordPress}
