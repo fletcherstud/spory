@@ -18,7 +18,7 @@ export const searchLocations = async (params: SearchParams) => {
       ...params,
       // Use multiple layers to get cities, counties, and other administrative areas
       layers: 'locality',
-      limit: 5 // Increase limit to get more results
+      limit: 5
     },
     headers: {
       'Authorization': RADAR_API_KEY

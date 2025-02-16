@@ -36,13 +36,13 @@ interface AuthContextType {
   syncPurchases: () => Promise<boolean>;
   loadMoreHistory: () => Promise<void>;
 }
-
+console.log("AuthContext.tsx - Start of file execution:", Date.now());
 const AuthContext = createContext<AuthContextType | null>(null);
 const db = getFirestore(app);
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage),
 });
-
+console.log("AuthContext.tsx - Auth initialized:", Date.now());
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

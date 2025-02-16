@@ -71,7 +71,7 @@ export default function ResponseComponent({
       if (isLoading || !user?.isPremium || hasSavedToHistory || isHistoryView) return;
       console.log("saving to history");
       const historyItem: HistoryItem = {
-        response,
+        response: cleanResponse(response),
         thumbnail: keywordsData.find(k => k.thumbnail)?.thumbnail || null,
         timestamp: Timestamp.now(),
         location: selectedLocation ? selectedLocation.formattedAddress : "Device Location",
@@ -102,21 +102,6 @@ export default function ResponseComponent({
   return (
     <SafeAreaView className="flex-1">
       <View className="flex-1">
-        {/* <TouchableOpacity
-          className="pl-5"
-          disabled={isLoading}
-          onPress={clearResponse}
-        >
-          <Text className="text-2xl">✕</Text>
-        </TouchableOpacity> */}
-        {/* <View className="flex-row justify-between items-center px-4">
-		<TouchableOpacity>
-			<Text className="text-2xl">←</Text>
-		</TouchableOpacity>
-		<TouchableOpacity>
-			<Text className="text-2xl">→</Text>
-		</TouchableOpacity>
-	</View> */}
         <ScrollView
           className="flex-1"
           stickyHeaderIndices={[1]} // Index of the "The History" header in the ScrollView children
