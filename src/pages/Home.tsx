@@ -140,7 +140,7 @@ export const Home = () => {
       if (error.message === "Location permission denied") {
         alert("Location permission is required to get facts");
       } else {
-        alert("Failed to get location history");
+        alert("Failed to get location fact");
       }
       throw error; // Re-throw to prevent fact count increment
     }

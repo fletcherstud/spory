@@ -14,7 +14,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.jonathanmfletcher.sporyai",
-      buildNumber: "7",
+      buildNumber: "8",
       supportsTablet: true,
       usesAppleSignIn: true,
     },
@@ -47,6 +47,7 @@ module.exports = {
       firebaseAppId: process.env.FIREBASE_APP_ID,
       revenueCat: process.env.REVENUE_CAT,
       radarApiKey: process.env.RADAR_API_KEY,
+      openaiApiKey: process.env.OPENAI_API_KEY,
     },
   },
 };
