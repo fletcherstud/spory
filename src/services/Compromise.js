@@ -1,10 +1,4 @@
-import nlp from "compromise";
-import plg from "compromise-dates";
-import wiki from "compromise-wikipedia";
 import { getWikiData } from './WikiService';
-
-nlp.plugin(plg);
-nlp.plugin(wiki);
 
 const extractPremarkedKeywords = (text) => {
   const keywords = [];
