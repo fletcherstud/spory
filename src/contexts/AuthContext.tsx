@@ -36,13 +36,11 @@ interface AuthContextType {
   syncPurchases: () => Promise<boolean>;
   loadMoreHistory: () => Promise<void>;
 }
-console.log("AuthContext.tsx - Start of file execution:", Date.now());
 const AuthContext = createContext<AuthContextType | null>(null);
 const db = getFirestore(app);
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage),
 });
-console.log("AuthContext.tsx - Auth initialized:", Date.now());
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -64,18 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Function to update user's premium status
   const updatePremiumStatus = async () => {
     if (user) {
-      console.log("Updating premium status for user:", user.id);
-
       const isPremium = await checkPremiumStatus();
-      console.log(
-        "New premium status:",
-        isPremium,
-        "Current status:",
-        user.isPremium
-      );
 
       if (isPremium !== user.isPremium) {
-        console.log("Premium status changed, updating user...");
         setUser((prevUser) => ({
           ...prevUser!,
           isPremium,
@@ -94,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Set up RevenueCat listeners
   useEffect(() => {
     const customerInfoUpdateListener = async (customerInfo: any) => {
-      console.log("Purchase status updated:", customerInfo);
       await updatePremiumStatus();
     };
 
@@ -129,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          console.log("Firebase user found:", firebaseUser.uid);
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           
           if (userDoc.exists()) {
@@ -159,7 +146,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             });
           }
         } else {
-          console.log("No Firebase user found");
           setUser(null);
         }
       } catch (error) {
@@ -201,7 +187,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // If user exists, preserve their history
       if (userDoc.exists()) {
         const existingData = userDoc.data();
-        console.log("Existing data:", existingData);
         await setDoc(
           userRef,
           {
@@ -254,8 +239,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       const firebaseUser = firebaseUserCredential.user;
 
-      console.log("Firebase authentication successful", firebaseUser.uid);
-
       // Try to get existing user data from Firestore
       const userRef = doc(db, "users", firebaseUser.uid);
       const userDoc = await getDoc(userRef);
@@ -281,7 +264,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       // Log in to RevenueCat and sync purchases
-      console.log("Logging into RevenueCat with user ID:", firebaseUser.uid);
       await Purchases.logIn(firebaseUser.uid);
       await Purchases.setAttributes({
         email: newUser.email,
@@ -311,11 +293,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         ...newUser,
         history: historyItems
       });
-
-      console.log("User created/updated in Firestore with history:", historyItems);
-    } catch (error) {
+      } catch (error) {
       if (error.code === "ERR_CANCELED") {
-        console.log("User cancelled Apple sign in");
         return;
       }
       console.error("Sign in error:", error);
@@ -328,7 +307,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signOut = async () => {
     try {
       if (user) {
-        console.log("Signing out user:", user.id);
         await updateUserInFirestore({
           ...user,
           lastLogoutAt: Timestamp.now(),
@@ -337,10 +315,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setHasAttemptedRestore(false);
       
-      console.log("Logging out of RevenueCat...");
       await Purchases.logOut();
 
-      console.log("Signing out of Firebase...");
       await firebaseSignOut(auth);
 
       setLastVisibleDoc(null);
@@ -370,24 +346,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Get customer info without forcing a sync
       const customerInfo = await Purchases.getCustomerInfo();
-      console.log("Full customer info:", JSON.stringify(customerInfo, null, 2));
 
       if (customerInfo.entitlements.active["Pro"] !== undefined) {
         const proEntitlement = customerInfo.entitlements.active["Pro"];
-        console.log("Pro entitlement details:", {
-          isActive: proEntitlement.isActive,
-          willRenew: proEntitlement.willRenew,
-          periodType: proEntitlement.periodType,
-          latestPurchaseDate: proEntitlement.latestPurchaseDate,
-          originalPurchaseDate: proEntitlement.originalPurchaseDate,
-          expirationDate: proEntitlement.expirationDate,
-        });
         return proEntitlement.isActive;
       }
-      console.log("No Pro entitlement found in customer info");
       return false;
     } catch (error) {
-      console.error("Error checking premium status:", error);
       return false;
     }
   };
@@ -395,17 +360,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Update the syncPurchases function
   const syncPurchases = async () => {
     try {
-      console.log("Starting purchase sync...");
-
       // First ensure user is properly identified in RevenueCat
       if (user) {
-        console.log("Ensuring user is identified in RevenueCat:", user.id);
         const currentUser = await Purchases.getCustomerInfo();
-        console.log("Current RevenueCat user:", currentUser.originalAppUserId);
-
         // If the current RevenueCat user doesn't match our user, log them in again
         if (currentUser.originalAppUserId !== user.id) {
-          console.log("RevenueCat user mismatch, logging in again...");
+          await Purchases.logIn(user.id);
           await Purchases.logIn(user.id);
           await Purchases.setAttributes({
             email: user.email,
@@ -417,7 +377,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // Only try to sync if we haven't already attempted
       if (!hasAttemptedRestore) {
         try {
-          console.log("Syncing purchases with store...");
           await Purchases.syncPurchases();
           setHasAttemptedRestore(true);
         } catch (error) {
@@ -425,17 +384,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           // Continue to get customer info
         }
       }
-
-      // Get latest customer info
-      const customerInfo = await Purchases.getCustomerInfo();
-      console.log(
-        "Post-sync customer info:",
-        JSON.stringify(customerInfo, null, 2)
-      );
-
       // Update premium status
       const wasUpdated = await updatePremiumStatus();
-      console.log("Premium status updated:", wasUpdated);
 
       return wasUpdated;
     } catch (error) {

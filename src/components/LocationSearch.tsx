@@ -33,7 +33,6 @@ export const LocationSearch = ({ isVisible, onClose, onSelectLocation }: Props) 
       }
 
       setIsLoading(true);
-      console.log('Searching for locations:', query);
       try {
         const response = await searchLocations({
           query,

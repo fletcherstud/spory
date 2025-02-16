@@ -97,7 +97,6 @@ export const Home = () => {
       setIsLoading(true);
       let coords;
       if (selectedLocation) { 
-        console.log("Using selected location:", selectedLocation);
         coords = {
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude
@@ -170,7 +169,6 @@ export const Home = () => {
   };
 
   const handleLocationSelect = (location: RadarAddress) => {
-    console.log("Setting location",location);
     setSelectedLocation(location);
     setIsSearchingLocation(false);
   };

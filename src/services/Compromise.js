@@ -16,7 +16,6 @@ const extractPremarkedKeywords = (text) => {
 export const extractKeywords = async (text) => {
   // Extract pre-marked keywords and clean text
   const { keywords, cleanText } = extractPremarkedKeywords(text);
-  console.log('Extracted pre-marked keywords:', keywords);
 
   // Create a map of keyword positions using the clean text
   const keywordPositions = new Map();
@@ -36,7 +35,6 @@ export const extractKeywords = async (text) => {
           found: true
         };
       } catch (error) {
-        console.log(`No Wikipedia data found for ${keyword}`);
         return {
           keyword,
           thumbnail: null,

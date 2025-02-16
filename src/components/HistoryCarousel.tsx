@@ -27,7 +27,6 @@ export const HistoryCarousel = ({ history, onPress }: Props) => {
   }
 
   const handleEndReached = async () => {
-    console.log("handleEndReached");
     if (!isLoadingMore) {
       setIsLoadingMore(true);
       await loadMoreHistory();

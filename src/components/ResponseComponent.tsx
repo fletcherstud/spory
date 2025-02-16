@@ -67,9 +67,7 @@ export default function ResponseComponent({
   // Save to history effect
   useEffect(() => {
     const saveToHistory = async () => {
-      console.log(isLoading, !user?.isPremium, hasSavedToHistory, isHistoryView);
       if (isLoading || !user?.isPremium || hasSavedToHistory || isHistoryView) return;
-      console.log("saving to history");
       const historyItem: HistoryItem = {
         response: cleanResponse(response),
         thumbnail: keywordsData.find(k => k.thumbnail)?.thumbnail || null,

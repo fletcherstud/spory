@@ -16,7 +16,6 @@ export const useFactLimit = () => {
   // Check and update fact count when app becomes active
   useEffect(() => {
     const checkAndUpdateFactCount = async () => {
-			console.log("Getting Fact Count")
       await loadFactCount();
     };
 

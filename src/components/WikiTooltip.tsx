@@ -101,7 +101,6 @@ const WikiTooltip: React.FC<WikiTooltipProps> = ({
         )}`
       );
       const data = await response.json();
-      console.log("Summary ", keyword, data);
       setSummary(
         data.extract?.substring(0, 150) + "..." || "No summary available"
       );
