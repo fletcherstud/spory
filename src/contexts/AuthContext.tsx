@@ -1,8 +1,20 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Purchases from "react-native-purchases";
-import { getFirestore, Timestamp, collection, query, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { 
+  getFirestore, 
+  Timestamp, 
+  collection, 
+  query, 
+  orderBy, 
+  limit, 
+  getDocs, 
+  startAfter, 
+  deleteDoc, 
+  doc,
+  getDoc,
+  setDoc 
+} from "firebase/firestore";
 import {
   signInWithCredential,
   OAuthProvider,
@@ -35,6 +47,7 @@ interface AuthContextType {
   setIsSigningIn: (value: boolean) => void;
   syncPurchases: () => Promise<boolean>;
   loadMoreHistory: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextType | null>(null);
 const db = getFirestore(app);
@@ -436,6 +449,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      if (!user) return;
+
+      await setDoc(doc(db, 'deleted_accounts', user.id), {
+        userId: user.id,
+        isPremium: user.isPremium,
+        deletedAt: Timestamp.now(),
+      });
+
+      // Rest of deletion logic
+      await deleteDoc(doc(db, 'users', user.id));
+      const historyRef = collection(db, 'users', user.id, 'history');
+      const snapshot = await getDocs(historyRef);
+      await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+
+      await Purchases.logOut();
+      await auth.currentUser?.delete();
+      setUser(null);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -449,6 +487,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsSigningIn,
         syncPurchases,
         loadMoreHistory,
+        deleteAccount,
       }}
     >
       {children}

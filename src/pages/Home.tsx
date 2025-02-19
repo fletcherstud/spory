@@ -27,6 +27,7 @@ import { RadarAddress } from '../types/radar';
 import { LocationSearch } from '../components/LocationSearch';
 import { HistoryItem } from '../types/user';
 import { HistoryCarousel } from '../components/HistoryCarousel';
+import { SettingsModal } from '../components/SettingsModal';
 
 interface WikiData {
   keyword: string;
@@ -52,6 +53,7 @@ export const Home = () => {
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
   const [currentModifier, setCurrentModifier] = useState<string | null>(null);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
   const checkLocationPermission = async () => {
     const { status } = await Location.getForegroundPermissionsAsync();
@@ -232,6 +234,21 @@ export const Home = () => {
     );
   };
 
+  const UserButton = () => (
+    <TouchableOpacity
+      onPress={() => setIsSettingsVisible(true)}
+      className="flex-row items-center bg-gray-100 rounded-full px-4 py-2"
+    >
+      <Text className="text-sm font-semibold mr-2">
+        {user?.fullName || user?.email || "User"}
+      </Text>
+      <FactsLeftText
+        remainingFacts={remainingFacts}
+        isPremium={user?.isPremium}
+      />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView className="flex-1">
       {hasInitialResponse ? (
@@ -241,34 +258,7 @@ export const Home = () => {
               <Text className="text-2xl">✕</Text>
             </TouchableOpacity>
             {user ? (
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert(
-                    "Sign Out",
-                    "Are you sure you want to sign out?",
-                    [
-                      {
-                        text: "Cancel",
-                        style: "cancel",
-                      },
-                      {
-                        text: "Sign Out",
-                        onPress: signOut,
-                        style: "destructive",
-                      },
-                    ]
-                  );
-                }}
-                className="flex-row items-center bg-gray-100 rounded-full px-4 py-2"
-              >
-                <Text className="text-sm font-semibold mr-2">
-                  {user.fullName || user.email || "User"}
-                </Text>
-                <FactsLeftText
-                  remainingFacts={remainingFacts}
-                  isPremium={user.isPremium}
-                />
-              </TouchableOpacity>
+              <UserButton />
             ) : (
               <View className="flex-row items-center gap-2">
                 <FactsLeftText remainingFacts={remainingFacts} />
@@ -303,34 +293,7 @@ export const Home = () => {
         <View className="flex-1">
           <View className="px-4 py-2 flex-row justify-end">
             {user ? (
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert(
-                    "Sign Out",
-                    "Are you sure you want to sign out?",
-                    [
-                      {
-                        text: "Cancel",
-                        style: "cancel",
-                      },
-                      {
-                        text: "Sign Out",
-                        onPress: signOut,
-                        style: "destructive",
-                      },
-                    ]
-                  );
-                }}
-                className="flex-row items-center bg-gray-100 rounded-full px-4 py-2"
-              >
-                <Text className="text-sm font-semibold mr-2">
-                  {user.fullName || user.email || "User"}
-                </Text>
-                <FactsLeftText
-                  remainingFacts={remainingFacts}
-                  isPremium={user.isPremium}
-                />
-              </TouchableOpacity>
+              <UserButton />
             ) : (
               <View className="flex-row items-center gap-2">
                 <FactsLeftText remainingFacts={remainingFacts} />
@@ -403,6 +366,10 @@ export const Home = () => {
         isVisible={isSearchingLocation}
         onClose={handleCloseLocationSearch}
         onSelectLocation={handleLocationSelect}
+      />
+      <SettingsModal 
+        isVisible={isSettingsVisible}
+        onClose={() => setIsSettingsVisible(false)}
       />
     </SafeAreaView>
   );
