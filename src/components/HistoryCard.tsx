@@ -35,7 +35,7 @@ export const HistoryCard = ({ item, onPress }: Props) => {
           numberOfLines={2} 
           className="text-sm"
         >
-          {item.response}
+          {item.response.replace(/\*\*/g, '')}
         </Text>
         <Text className="text-xs text-gray-400 mt-1">
           {item.timestamp.toDate().toLocaleDateString()}

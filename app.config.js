@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: "Spory AI",
     slug: "spory-ai",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -14,7 +14,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.jonathanmfletcher.sporyai",
-      buildNumber: "12",
+      buildNumber: "1",
       supportsTablet: true,
       usesAppleSignIn: true,
     },

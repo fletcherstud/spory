@@ -1,5 +1,5 @@
 export interface HistoryItem {
-  response: string;
+  response: string;      // cleaned response for display
   thumbnail: string | null;
   timestamp: FirebaseFirestore.Timestamp;
   location?: string;

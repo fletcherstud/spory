@@ -28,6 +28,9 @@ import { LocationSearch } from '../components/LocationSearch';
 import { HistoryItem } from '../types/user';
 import { HistoryCarousel } from '../components/HistoryCarousel';
 import { SettingsModal } from '../components/SettingsModal';
+import { collection, addDoc } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 interface WikiData {
   keyword: string;
@@ -38,8 +41,17 @@ interface WikiData {
   found: boolean;
 }
 
+const getCurrentLocation = async () => {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== "granted") {
+    throw new Error("Location permission denied");
+  }
+  const location = await Location.getCurrentPositionAsync({});
+  return location.coords;
+};
+
 export const Home = () => {
-  const { user, signInWithApple, signOut, isSigningIn } = useAuth();
+  const { user, signInWithApple, signOut, isSigningIn, setUser } = useAuth();
   const { attemptPremiumFeature } = usePremiumFeature();
   const { canGetFact, incrementFactCount, remainingFacts } = useFactLimit();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,8 +63,6 @@ export const Home = () => {
   const [hasInitialResponse, setHasInitialResponse] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<RadarAddress | null>(null);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
-  const [currentModifier, setCurrentModifier] = useState<string | null>(null);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
 
   const checkLocationPermission = async () => {
@@ -97,36 +107,40 @@ export const Home = () => {
   ) => {
     try {
       setIsLoading(true);
-      let coords;
-      if (selectedLocation) { 
-        coords = {
-          latitude: selectedLocation.latitude,
-          longitude: selectedLocation.longitude
-        };
-      } else {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        setHasLocationPermission(status);
+      let coords = selectedLocation ? {
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude
+      } : await getCurrentLocation();
 
-        if (status !== "granted") {
-          throw new Error("Location permission denied");
-        }
-
-        const location = await Location.getCurrentPositionAsync({});
-        coords = location.coords;
-      }
-
-      const history = await getChatGPTResponse(
+      const response = await getChatGPTResponse(
         coords.latitude,
         coords.longitude,
         modifierTitle
       );
-      setResponse(history);
       
+      setResponse(response); // Keep asterisks for display
+
+      // Process keywords
+      const keywords = await extractKeywords(response);
+      setKeywordsData(keywords);
+
+      // Save to history for premium users
       if (user?.isPremium) {
-        const keywords = await extractKeywords(history);
-        const firstThumbnail = keywords.find(k => k.thumbnail)?.thumbnail || null;
+        const historyItem: HistoryItem = {
+          response, // Store raw response with asterisks
+          thumbnail: keywords.find(k => k.thumbnail)?.thumbnail || null,
+          timestamp: Timestamp.now(),
+          location: selectedLocation?.formattedAddress || "Device Location",
+          modifier: modifierTitle
+        };
+
+        const historyRef = collection(db, 'users', user.id, 'history');
+        await addDoc(historyRef, historyItem);
+        setUser({
+          ...user,
+          history: [historyItem, ...(user.history || [])]
+        });
       }
-      setCurrentModifier(modifierTitle);
     } catch (error) {
       setIsLoading(false);
       if (error.message === "Location permission denied") {
@@ -180,16 +194,18 @@ export const Home = () => {
   };
 
   const handleHistorySelect = async (item: HistoryItem) => {
-    setResponse(item.response);
-    setIsLoading(true);
-    setSelectedHistoryItem(item);
-    setIsProcessingKeywords(true);
     try {
+      setIsLoading(true);
+      // Process keywords using raw response first
+      setIsProcessingKeywords(true);
       const extracted = await extractKeywords(item.response);
       setKeywordsData(extracted);
+      
+      // Then set response and show everything
+      setResponse(item.response);
       setHasInitialResponse(true);
     } catch (error) {
-      console.error("Error extracting keywords:", error);
+      console.error("Error processing history item:", error);
       setKeywordsData([]);
     } finally {
       setIsProcessingKeywords(false);
@@ -271,13 +287,8 @@ export const Home = () => {
           </View>
           <ResponseComponent
             response={response}
-            clearResponse={clearResponse}
-            getLocationAndHistory={handlePremiumFeature}
             isLoading={isLoadingOrProcessing}
             keywordsData={keywordsData}
-            selectedLocation={selectedLocation}
-            isHistoryView={!!selectedHistoryItem}
-            modifier={currentModifier}
           />
           {!isLoadingOrProcessing && hasLocationPermission !== "denied" && (
             <Animated.View className="mt-auto" exiting={FadeOutDown}>
